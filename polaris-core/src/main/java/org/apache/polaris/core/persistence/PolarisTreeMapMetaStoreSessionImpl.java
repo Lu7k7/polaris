@@ -25,7 +25,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.apache.polaris.core.catalog.PaginationToken;
+import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.PolarisCallContext;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
@@ -342,7 +342,7 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
         catalogId,
         parentId,
         entityType,
-        PaginationToken.readEverything(),
+        PageToken.readEverything(),
         entityFilter,
         entity ->
             new PolarisEntityActiveRecord(
@@ -360,7 +360,7 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
       long catalogId,
       long parentId,
       @NotNull PolarisEntityType entityType,
-      PaginationToken paginationToken,
+      PageToken pageToken,
       @NotNull Predicate<PolarisBaseEntity> entityFilter,
       @NotNull Function<PolarisBaseEntity, T> transformer) {
     // full range scan under the parent for that type
@@ -369,8 +369,8 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
         .readRange(this.store.buildPrefixKeyComposite(catalogId, parentId, entityType.getCode()))
         .stream()
         .filter(entityFilter)
-        .skip(paginationToken.offset)
-        .limit(paginationToken.pageSize)
+        .skip(pageToken.offset)
+        .limit(pageToken.pageSize)
         .map(transformer)
         .collect(Collectors.toList());
   }

@@ -21,7 +21,7 @@ package org.apache.polaris.core.catalog;
 
 import java.util.Base64;
 
-public class PaginationToken {
+public class PageToken {
 
     public final long offset;
     public final long pageSize;
@@ -30,7 +30,7 @@ public class PaginationToken {
     public static final long TOKEN_START = 0;
     public static final long DEFAULT_PAGE_SIZE = 1000;
 
-    public PaginationToken(long offset, long pageSize) {
+    public PageToken(long offset, long pageSize) {
         this.offset = offset;
         this.pageSize = pageSize;
     }
@@ -38,23 +38,23 @@ public class PaginationToken {
     /**
      * Construct a PaginationToken from a plain limit
      */
-    public static PaginationToken fromLimit(int limit) {
-        return new PaginationToken(TOKEN_START, limit);
+    public static PageToken fromLimit(int limit) {
+        return new PageToken(TOKEN_START, limit);
     }
 
     /**
      * Construct a PaginationToken from a plain limit
      */
-    public static PaginationToken readEverything() {
-        return new PaginationToken(TOKEN_START, Integer.MAX_VALUE);
+    public static PageToken readEverything() {
+        return new PageToken(TOKEN_START, Integer.MAX_VALUE);
     }
 
     /**
      * Decode a token string into a PaginationToken object
      */
-    public static PaginationToken fromString(String tokenString) {
+    public static PageToken fromString(String tokenString) {
         if (tokenString == null || tokenString.isEmpty()) {
-            return new PaginationToken(TOKEN_START, DEFAULT_PAGE_SIZE);
+            return new PageToken(TOKEN_START, DEFAULT_PAGE_SIZE);
         }
 
         if (!tokenString.startsWith(TOKEN_PREFIX)) {
@@ -72,7 +72,7 @@ public class PaginationToken {
             long offset = Long.parseLong(parts[1]);
             long pageSize = Long.parseLong(parts[2]);
 
-            return new PaginationToken(offset, pageSize);
+            return new PageToken(offset, pageSize);
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to decode token: " + tokenString, e);
         }

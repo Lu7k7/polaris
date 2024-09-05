@@ -23,7 +23,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import org.apache.polaris.core.catalog.PaginationToken;
+import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.PolarisCallContext;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
@@ -341,7 +341,7 @@ public interface PolarisMetaStoreSession {
    * @param catalogId catalog id for that entity, NULL_ID if the entity is top-level
    * @param parentId id of the parent, can be the special 0 value representing the root entity
    * @param entityType type of entities to list
-   * @param paginationToken the pagination token to use
+   * @param pageToken the pagination token to use
    * @param entityFilter the filter to be applied to each entity. Only entities where the predicate
    *     returns true are returned in the list
    * @param transformer the transformation function applied to the {@link PolarisBaseEntity} before
@@ -354,7 +354,7 @@ public interface PolarisMetaStoreSession {
       long catalogId,
       long parentId,
       @NotNull PolarisEntityType entityType,
-      @NotNull PaginationToken paginationToken,
+      @NotNull PageToken pageToken,
       @NotNull Predicate<PolarisBaseEntity> entityFilter,
       @NotNull Function<PolarisBaseEntity, T> transformer);
 
