@@ -47,6 +47,8 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+
+import org.apache.polaris.core.catalog.PaginationToken;
 import org.apache.polaris.core.PolarisCallContext;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
@@ -522,7 +524,7 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
         catalogId,
         parentId,
         entityType,
-        Integer.MAX_VALUE,
+        PaginationToken.readEverything(),
         entityFilter,
         entity ->
             new PolarisEntityActiveRecord(
@@ -540,7 +542,7 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
       long catalogId,
       long parentId,
       @NotNull PolarisEntityType entityType,
-      int limit,
+      @NotNull PaginationToken paginationToken,
       @NotNull Predicate<PolarisBaseEntity> entityFilter,
       @NotNull Function<PolarisBaseEntity, T> transformer) {
     // full range scan under the parent for that type
@@ -549,7 +551,8 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
         .stream()
         .map(ModelEntity::toEntity)
         .filter(entityFilter)
-        .limit(limit)
+//        .skip(paginationToken.offset())
+//        .limit(paginationToken.pageSize())
         .map(transformer)
         .collect(Collectors.toList());
   }

@@ -33,6 +33,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import org.apache.polaris.core.catalog.PaginationToken;
 import org.apache.polaris.core.PolarisCallContext;
 import org.apache.polaris.core.entity.AsyncTaskType;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
@@ -1481,7 +1483,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
               catalogId,
               catalogId,
               PolarisEntityType.CATALOG_ROLE,
-              2,
+              PaginationToken.fromLimit(2),
               entity -> true,
               Function.identity());
 
@@ -2013,7 +2015,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
       @NotNull PolarisCallContext callCtx,
       @NotNull PolarisMetaStoreSession ms,
       String executorId,
-      int limit) {
+      PaginationToken paginationToken) {
 
     // find all available tasks
     List<PolarisBaseEntity> availableTasks =
@@ -2022,7 +2024,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
             PolarisEntityConstants.getRootEntityId(),
             PolarisEntityConstants.getRootEntityId(),
             PolarisEntityType.TASK,
-            limit,
+            paginationToken,
             entity -> {
               PolarisObjectMapperUtil.TaskExecutionState taskState =
                   PolarisObjectMapperUtil.parseTaskState(entity);
