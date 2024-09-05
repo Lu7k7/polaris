@@ -19,6 +19,7 @@
 
 package org.apache.polaris.core.catalog;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 public class PageToken {
@@ -62,7 +63,7 @@ public class PageToken {
         }
 
         try {
-            String decoded = new String(Base64.getDecoder().decode(tokenString));
+            String decoded = new String(Base64.getDecoder().decode(tokenString), StandardCharsets.UTF_8);
             String[] parts = decoded.split(":");
 
             if (parts.length != 3 || !parts[0].equals(TOKEN_PREFIX)) {
@@ -81,6 +82,6 @@ public class PageToken {
     @Override
     public String toString() {
         String tokenContent = TOKEN_PREFIX + ":" + offset + ":" + pageSize;
-        return Base64.getEncoder().encodeToString(tokenContent.getBytes());
+        return Base64.getEncoder().encodeToString(tokenContent.getBytes(StandardCharsets.UTF_8));
     }
 }

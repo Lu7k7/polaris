@@ -2063,9 +2063,9 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
 
   @Override
   public @NotNull EntitiesResult loadTasks(
-      @NotNull PolarisCallContext callCtx, String executorId, int limit) {
+      @NotNull PolarisCallContext callCtx, String executorId, PageToken pageToken) {
     PolarisMetaStoreSession ms = callCtx.getMetaStore();
-    return ms.runInTransaction(callCtx, () -> this.loadTasks(callCtx, ms, executorId, limit));
+    return ms.runInTransaction(callCtx, () -> this.loadTasks(callCtx, ms, executorId, pageToken));
   }
 
   /** {@inheritDoc} */

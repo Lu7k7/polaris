@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.polaris.core.PolarisCallContext;
+import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
 import org.apache.polaris.core.entity.PolarisEntity;
@@ -1199,7 +1200,7 @@ public interface PolarisMetaStoreManager {
    * @return list of tasks to be completed
    */
   @NotNull
-  EntitiesResult loadTasks(@NotNull PolarisCallContext callCtx, String executorId, int limit);
+  EntitiesResult loadTasks(@NotNull PolarisCallContext callCtx, String executorId, PageToken pageToken);
 
   /** Result of a getSubscopedCredsForEntity() call */
   class ScopedCredentialsResult extends BaseResult {

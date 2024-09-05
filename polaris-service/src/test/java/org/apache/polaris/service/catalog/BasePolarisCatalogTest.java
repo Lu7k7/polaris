@@ -62,6 +62,7 @@ import org.apache.polaris.core.admin.model.AwsStorageConfigInfo;
 import org.apache.polaris.core.admin.model.StorageConfigInfo;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
+import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.CatalogEntity;
@@ -1121,7 +1122,7 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
         .as("Table should not exist after drop")
         .rejects(TABLE);
     List<PolarisBaseEntity> tasks =
-        metaStoreManager.loadTasks(polarisContext, "testExecutor", 1).getEntities();
+        metaStoreManager.loadTasks(polarisContext, "testExecutor", PageToken.fromLimit(1)).getEntities();
     Assertions.assertThat(tasks).hasSize(1);
     TaskEntity taskEntity = TaskEntity.of(tasks.get(0));
     EnumMap<PolarisCredentialProperty, String> credentials =
@@ -1235,7 +1236,7 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
     handler.handleTask(
         TaskEntity.of(
             metaStoreManager
-                .loadTasks(polarisContext, "testExecutor", 1)
+                .loadTasks(polarisContext, "testExecutor", PageToken.fromLimit(1))
                 .getEntities()
                 .getFirst()));
     Assertions.assertThat(measured.getNumDeletedFiles()).as("A table was deleted").isGreaterThan(0);
