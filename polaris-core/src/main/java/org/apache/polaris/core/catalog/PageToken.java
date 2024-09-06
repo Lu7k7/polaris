@@ -69,14 +69,20 @@ public class PageToken {
             new String(Base64.getDecoder().decode(tokenString), StandardCharsets.UTF_8);
         String[] parts = decoded.split(":");
 
-        if (parts.length != 3 || !parts[0].equals(TOKEN_PREFIX)) {
-          throw new IllegalArgumentException("Invalid token format");
+        if (parts.length != 4 || !parts[0].equals(TOKEN_PREFIX)) {
+          throw new IllegalArgumentException("Invalid token format in token: " + tokenString);
         }
 
         int offset = Integer.parseInt(parts[1]);
         int pageSize = Integer.parseInt(parts[2]);
+        int checksum = Integer.parseInt(parts[3]);
+        PageToken token = new PageToken(offset, pageSize);
 
-        return new PageToken(offset, pageSize);
+        if (token.hashCode() != checksum) {
+          throw new IllegalArgumentException("Invalid checksum for token: " + tokenString);
+        } else {
+          return token;
+        }
       } catch (Exception e) {
         throw new IllegalArgumentException("Failed to decode page token: " + tokenString, e);
       }
@@ -118,7 +124,7 @@ public class PageToken {
   /** Serialize a PageToken into a string */
   @Override
   public String toString() {
-    String tokenContent = TOKEN_PREFIX + ":" + offset + ":" + pageSize;
+    String tokenContent = TOKEN_PREFIX + ":" + offset + ":" + pageSize + ":" + hashCode();
     return Base64.getEncoder().encodeToString(tokenContent.getBytes(StandardCharsets.UTF_8));
   }
 
