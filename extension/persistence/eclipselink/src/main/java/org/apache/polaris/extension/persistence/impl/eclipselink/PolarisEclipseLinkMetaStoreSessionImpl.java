@@ -558,7 +558,7 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
             .limit(pageToken.pageSize)
             .map(transformer)
             .collect(Collectors.toList());
-    return new PolarisPage<T>(pageToken.updated(data), data);
+    return pageToken.buildNextPage(data);
   }
 
   /** {@inheritDoc} */

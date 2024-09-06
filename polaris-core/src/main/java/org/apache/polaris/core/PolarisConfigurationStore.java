@@ -68,6 +68,8 @@ public interface PolarisConfigurationStore {
 
     if (config.defaultValue instanceof Boolean) {
       return config.cast(Boolean.valueOf(String.valueOf(value)));
+    } else if (config.defaultValue instanceof Integer) {
+      return config.cast(Integer.valueOf(value.toString()));
     } else {
       return config.cast(value);
     }

@@ -20,6 +20,10 @@ package org.apache.polaris.core.catalog;
 
 import java.util.List;
 
+/**
+ * A wrapper for a List of data and a PageToken that can be used to continue the listing operation
+ * that generated that data.
+ */
 public class PolarisPage<T> {
   public final PageToken pageToken;
   public final List<T> data;

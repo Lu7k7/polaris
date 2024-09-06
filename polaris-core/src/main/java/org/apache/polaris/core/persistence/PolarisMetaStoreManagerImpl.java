@@ -808,8 +808,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
     // prune the returned list with only entities matching the entity subtype
     if (entitySubType != PolarisEntitySubType.ANY_SUBTYPE) {
       resultPage =
-          new PolarisPage<PolarisEntityActiveRecord>(
-              pageToken.updated(resultPage.data),
+          pageToken.buildNextPage(
               resultPage.data.stream()
                   .filter(rec -> rec.getSubTypeCode() == entitySubType.getCode())
                   .collect(Collectors.toList()));

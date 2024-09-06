@@ -59,24 +59,27 @@ public class PageToken {
 
   /** Deserialize a token string into a PageToken object */
   public static PageToken fromString(String tokenString) {
-    if (tokenString == null || tokenString.isEmpty()) {
+    if (tokenString == null) {
       return PageToken.readEverything();
-    }
+    } else if (tokenString.isEmpty()) {
+      return PageToken.fromLimit(DEFAULT_PAGE_SIZE);
+    } else {
+      try {
+        String decoded =
+            new String(Base64.getDecoder().decode(tokenString), StandardCharsets.UTF_8);
+        String[] parts = decoded.split(":");
 
-    try {
-      String decoded = new String(Base64.getDecoder().decode(tokenString), StandardCharsets.UTF_8);
-      String[] parts = decoded.split(":");
+        if (parts.length != 3 || !parts[0].equals(TOKEN_PREFIX)) {
+          throw new IllegalArgumentException("Invalid token format");
+        }
 
-      if (parts.length != 3 || !parts[0].equals(TOKEN_PREFIX)) {
-        throw new IllegalArgumentException("Invalid token format");
+        int offset = Integer.parseInt(parts[1]);
+        int pageSize = Integer.parseInt(parts[2]);
+
+        return new PageToken(offset, pageSize);
+      } catch (Exception e) {
+        throw new IllegalArgumentException("Failed to decode page token: " + tokenString, e);
       }
-
-      int offset = Integer.parseInt(parts[1]);
-      int pageSize = Integer.parseInt(parts[2]);
-
-      return new PageToken(offset, pageSize);
-    } catch (Exception e) {
-      throw new IllegalArgumentException("Failed to decode page token: " + tokenString, e);
     }
   }
 
@@ -90,6 +93,14 @@ public class PageToken {
     } else {
       return new PageToken(offset + newData.size(), pageSize);
     }
+  }
+
+  /**
+   * Builds a `PolarisPage<T>` from a `List<T>`. The `PageToken` attached to the new
+   * `PolarisPage<T>` is the same as the result of calling `updated(data)` on this `PageToken`.
+   */
+  public <T> PolarisPage<T> buildNextPage(List<T> data) {
+    return new PolarisPage<T>(this.updated(data), data);
   }
 
   /**

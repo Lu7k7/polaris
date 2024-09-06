@@ -27,6 +27,11 @@ import org.apache.iceberg.rest.responses.ListNamespacesResponse;
 import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.catalog.PolarisPage;
 
+/**
+ * Used in lieu of `ListNamespacesResponse` when there may be a `PageToken` associated with the
+ * response. Callers can use this `PageToken` to continue the listing operation and obtain more
+ * results.
+ */
 public class ListNamespacesResponseWithPageToken extends ListNamespacesResponse {
   private final PageToken pageToken;
 
