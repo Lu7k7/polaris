@@ -314,7 +314,8 @@ public interface PolarisMetaStoreManager {
     private final List<PolarisEntityActiveRecord> entities;
     private final Optional<PageToken> pageTokenOpt;
 
-    public static ListEntitiesResult fromPolarisPage(PolarisPage<PolarisEntityActiveRecord> polarisPage) {
+    public static ListEntitiesResult fromPolarisPage(
+        PolarisPage<PolarisEntityActiveRecord> polarisPage) {
       return new ListEntitiesResult(polarisPage.data, Optional.of(polarisPage.pageToken));
     }
 
@@ -383,7 +384,8 @@ public interface PolarisMetaStoreManager {
       @NotNull PolarisCallContext callCtx,
       @Nullable List<PolarisEntityCore> catalogPath,
       @NotNull PolarisEntityType entityType,
-      @NotNull PolarisEntitySubType entitySubType);
+      @NotNull PolarisEntitySubType entitySubType,
+      @NotNull PageToken pageToken);
 
   /** the return for a generate new entity id */
   class GenerateEntityIdResult extends BaseResult {
@@ -708,8 +710,7 @@ public interface PolarisMetaStoreManager {
      * @param entities list of entities being returned, implies success
      */
     public EntitiesResult(
-        @NotNull List<PolarisBaseEntity> entities,
-        @NotNull Optional<PageToken> pageTokenOpt) {
+        @NotNull List<PolarisBaseEntity> entities, @NotNull Optional<PageToken> pageTokenOpt) {
       super(ReturnStatus.SUCCESS);
       this.entities = entities;
       this.pageTokenOpt = pageTokenOpt;
@@ -1233,7 +1234,8 @@ public interface PolarisMetaStoreManager {
    * @return list of tasks to be completed
    */
   @NotNull
-  EntitiesResult loadTasks(@NotNull PolarisCallContext callCtx, String executorId, PageToken pageToken);
+  EntitiesResult loadTasks(
+      @NotNull PolarisCallContext callCtx, String executorId, PageToken pageToken);
 
   /** Result of a getSubscopedCredsForEntity() call */
   class ScopedCredentialsResult extends BaseResult {

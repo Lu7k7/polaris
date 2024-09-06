@@ -22,9 +22,8 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-
-import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.PolarisCallContext;
+import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.catalog.PolarisPage;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
@@ -313,7 +312,8 @@ public interface PolarisMetaStoreSession {
       @NotNull PolarisCallContext callCtx,
       long catalogId,
       long parentId,
-      @NotNull PolarisEntityType entityType);
+      @NotNull PolarisEntityType entityType,
+      @NotNull PageToken pageToken);
 
   /**
    * List active entities where some predicate returns true
@@ -332,6 +332,7 @@ public interface PolarisMetaStoreSession {
       long catalogId,
       long parentId,
       @NotNull PolarisEntityType entityType,
+      @NotNull PageToken pageToken,
       @NotNull Predicate<PolarisBaseEntity> entityFilter);
 
   /**

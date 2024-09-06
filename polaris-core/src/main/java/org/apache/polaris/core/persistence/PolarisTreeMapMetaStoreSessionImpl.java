@@ -24,9 +24,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
-import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.PolarisCallContext;
+import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.catalog.PolarisPage;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
@@ -326,8 +325,10 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
       @NotNull PolarisCallContext callCtx,
       long catalogId,
       long parentId,
-      @NotNull PolarisEntityType entityType) {
-    return listActiveEntities(callCtx, catalogId, parentId, entityType, Predicates.alwaysTrue());
+      @NotNull PolarisEntityType entityType,
+      @NotNull PageToken pageToken) {
+    return listActiveEntities(
+        callCtx, catalogId, parentId, entityType, pageToken, Predicates.alwaysTrue());
   }
 
   @Override
@@ -336,6 +337,7 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
       long catalogId,
       long parentId,
       @NotNull PolarisEntityType entityType,
+      @NotNull PageToken pageToken,
       @NotNull Predicate<PolarisBaseEntity> entityFilter) {
     // full range scan under the parent for that type
     return listActiveEntities(
@@ -365,16 +367,19 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
       @NotNull Predicate<PolarisBaseEntity> entityFilter,
       @NotNull Function<PolarisBaseEntity, T> transformer) {
     // full range scan under the parent for that type
-    List<T> entities = this.store
-        .getSliceEntitiesActive()
-        .readRange(this.store.buildPrefixKeyComposite(catalogId, parentId, entityType.getCode()))
-        .stream()
-        .filter(entityFilter)
-        .skip(pageToken.offset)
-        .limit(pageToken.pageSize)
-        .map(transformer)
-        .collect(Collectors.toList());
-    return new PolarisPage<T>(new PageToken(pageToken.offset + entities.size(), pageToken.pageSize), entities);
+    List<T> entities =
+        this.store
+            .getSliceEntitiesActive()
+            .readRange(
+                this.store.buildPrefixKeyComposite(catalogId, parentId, entityType.getCode()))
+            .stream()
+            .filter(entityFilter)
+            .skip(pageToken.offset)
+            .limit(pageToken.pageSize)
+            .map(transformer)
+            .collect(Collectors.toList());
+    return new PolarisPage<T>(
+        new PageToken(pageToken.offset + entities.size(), pageToken.pageSize), entities);
   }
 
   /** {@inheritDoc} */

@@ -21,26 +21,26 @@ package org.apache.polaris.service.types;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import java.util.List;
-import org.apache.iceberg.catalog.TableIdentifier;
-import org.apache.iceberg.rest.responses.ListTablesResponse;
+import org.apache.iceberg.catalog.Namespace;
+import org.apache.iceberg.rest.responses.ListNamespacesResponse;
 import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.catalog.PolarisPage;
 
-public class ListTablesResponseWithPageToken extends ListTablesResponse {
+public class ListNamespacesResponseWithPageToken extends ListNamespacesResponse {
   @JsonProperty("next-page-token")
   private final PageToken pageToken;
 
-  private final List<TableIdentifier> identifiers;
+  private final List<Namespace> namespaces;
 
-  public ListTablesResponseWithPageToken(PageToken pageToken, List<TableIdentifier> identifiers) {
+  public ListNamespacesResponseWithPageToken(PageToken pageToken, List<Namespace> namespaces) {
     this.pageToken = pageToken;
-    this.identifiers = identifiers;
+    this.namespaces = namespaces;
     this.validate();
   }
 
-  public static ListTablesResponseWithPageToken fromPolarisPage(
-      PolarisPage<TableIdentifier> polarisPage) {
-    return new ListTablesResponseWithPageToken(polarisPage.pageToken, polarisPage.data);
+  public static ListNamespacesResponseWithPageToken fromPolarisPage(
+      PolarisPage<Namespace> polarisPage) {
+    return new ListNamespacesResponseWithPageToken(polarisPage.pageToken, polarisPage.data);
   }
 
   public PageToken getPageToken() {
@@ -48,14 +48,14 @@ public class ListTablesResponseWithPageToken extends ListTablesResponse {
   }
 
   @Override
-  public List<TableIdentifier> identifiers() {
-    return this.identifiers != null ? this.identifiers : List.of();
+  public List<Namespace> namespaces() {
+    return this.namespaces != null ? this.namespaces : List.of();
   }
 
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-        .add("identifiers", this.identifiers)
+        .add("namespaces", this.namespaces)
         .add("pageToken", this.pageToken)
         .toString();
   }

@@ -1122,7 +1122,9 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
         .as("Table should not exist after drop")
         .rejects(TABLE);
     List<PolarisBaseEntity> tasks =
-        metaStoreManager.loadTasks(polarisContext, "testExecutor", PageToken.fromLimit(1)).getEntities();
+        metaStoreManager
+            .loadTasks(polarisContext, "testExecutor", PageToken.fromLimit(1))
+            .getEntities();
     Assertions.assertThat(tasks).hasSize(1);
     TaskEntity taskEntity = TaskEntity.of(tasks.get(0));
     EnumMap<PolarisCredentialProperty, String> credentials =

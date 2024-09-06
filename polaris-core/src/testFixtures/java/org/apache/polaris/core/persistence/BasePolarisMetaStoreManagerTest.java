@@ -391,7 +391,10 @@ public abstract class BasePolarisMetaStoreManagerTest {
                   do {
                     retry = false;
                     try {
-                      taskList = metaStoreManager.loadTasks(callCtx, executorId, PageToken.fromLimit(5)).getEntities();
+                      taskList =
+                          metaStoreManager
+                              .loadTasks(callCtx, executorId, PageToken.fromLimit(5))
+                              .getEntities();
                       taskList.stream().map(PolarisBaseEntity::getName).forEach(taskNames::add);
                     } catch (RetryOnConcurrencyException e) {
                       retry = true;

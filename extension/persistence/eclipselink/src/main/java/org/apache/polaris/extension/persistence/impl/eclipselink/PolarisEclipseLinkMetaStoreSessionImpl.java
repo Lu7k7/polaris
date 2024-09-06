@@ -47,9 +47,8 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-
-import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.PolarisCallContext;
+import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.catalog.PolarisPage;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
@@ -546,15 +545,16 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
       @NotNull PageToken pageToken,
       @NotNull Predicate<PolarisBaseEntity> entityFilter,
       @NotNull Function<PolarisBaseEntity, T> transformer) {
-    List<T> data = this.store
-        .lookupFullEntitiesActive(localSession.get(), catalogId, parentId, entityType)
-        .stream()
-        .map(ModelEntity::toEntity)
-        .filter(entityFilter)
-        .skip(pageToken.offset)
-        .limit(pageToken.pageSize)
-        .map(transformer)
-        .collect(Collectors.toList());
+    List<T> data =
+        this.store
+            .lookupFullEntitiesActive(localSession.get(), catalogId, parentId, entityType)
+            .stream()
+            .map(ModelEntity::toEntity)
+            .filter(entityFilter)
+            .skip(pageToken.offset)
+            .limit(pageToken.pageSize)
+            .map(transformer)
+            .collect(Collectors.toList());
     return new PolarisPage<T>(pageToken.updated(data), data);
   }
 

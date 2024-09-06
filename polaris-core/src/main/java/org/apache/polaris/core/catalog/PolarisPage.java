@@ -16,22 +16,21 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.polaris.core.catalog;
 
 import java.util.List;
 
 public class PolarisPage<T> {
-    public final PageToken pageToken;
-    public final List<T> data;
+  public final PageToken pageToken;
+  public final List<T> data;
 
-    public PolarisPage(PageToken pageToken, List<T> data) {
-        this.pageToken = pageToken;
-        this.data = data;
-    }
+  public PolarisPage(PageToken pageToken, List<T> data) {
+    this.pageToken = pageToken;
+    this.data = data;
+  }
 
-    /** Used to wrap a List of data into a PolarisPage when there is no more data */
-    public static <T> PolarisPage<T> fromData(List<T> data) {
-        return new PolarisPage<>(PageToken.DONE, data);
-    }
+  /** Used to wrap a List of data into a PolarisPage when there is no more data */
+  public static <T> PolarisPage<T> fromData(List<T> data) {
+    return new PolarisPage<>(PageToken.DONE, data);
+  }
 }

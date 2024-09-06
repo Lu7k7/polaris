@@ -34,9 +34,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.PolarisCallContext;
+import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.catalog.PolarisPage;
 import org.apache.polaris.core.entity.AsyncTaskType;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
@@ -789,27 +788,30 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
       @NotNull PolarisMetaStoreSession ms,
       @Nullable List<PolarisEntityCore> catalogPath,
       @NotNull PolarisEntityType entityType,
-      @NotNull PolarisEntitySubType entitySubType) {
+      @NotNull PolarisEntitySubType entitySubType,
+      @NotNull PageToken pageToken) {
     // first resolve again the catalogPath to that entity
     PolarisEntityResolver resolver = new PolarisEntityResolver(callCtx, ms, catalogPath);
 
     // return if we failed to resolve
     if (resolver.isFailure()) {
-      return new ListEntitiesResult(ReturnStatus.CATALOG_PATH_CANNOT_BE_RESOLVED, null, Optional.empty());
+      return new ListEntitiesResult(
+          ReturnStatus.CATALOG_PATH_CANNOT_BE_RESOLVED, null, Optional.empty());
     }
 
     // return list of active entities
     PolarisPage<PolarisEntityActiveRecord> resultPage =
         ms.listActiveEntities(
-            callCtx, resolver.getCatalogIdOrNull(), resolver.getParentId(), entityType);
+            callCtx, resolver.getCatalogIdOrNull(), resolver.getParentId(), entityType, pageToken);
 
     // prune the returned list with only entities matching the entity subtype
     if (entitySubType != PolarisEntitySubType.ANY_SUBTYPE) {
-      resultPage = new PolarisPage<PolarisEntityActiveRecord>(
-          resultPage.pageToken,
-          resultPage.data.stream()
-            .filter(rec -> rec.getSubTypeCode() == entitySubType.getCode())
-            .collect(Collectors.toList()));
+      resultPage =
+          new PolarisPage<PolarisEntityActiveRecord>(
+              resultPage.pageToken,
+              resultPage.data.stream()
+                  .filter(rec -> rec.getSubTypeCode() == entitySubType.getCode())
+                  .collect(Collectors.toList()));
     }
 
     // done
@@ -822,13 +824,15 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
       @NotNull PolarisCallContext callCtx,
       @Nullable List<PolarisEntityCore> catalogPath,
       @NotNull PolarisEntityType entityType,
-      @NotNull PolarisEntitySubType entitySubType) {
+      @NotNull PolarisEntitySubType entitySubType,
+      @NotNull PageToken pageToken) {
     // get meta store we should be using
     PolarisMetaStoreSession ms = callCtx.getMetaStore();
 
     // run operation in a read transaction
     return ms.runInReadTransaction(
-        callCtx, () -> listEntities(callCtx, ms, catalogPath, entityType, entitySubType));
+        callCtx,
+        () -> listEntities(callCtx, ms, catalogPath, entityType, entitySubType, pageToken));
   }
 
   /** {@inheritDoc} */
@@ -1482,13 +1486,14 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
       // get the list of catalog roles, at most 2
       List<PolarisBaseEntity> catalogRoles =
           ms.listActiveEntities(
-              callCtx,
-              catalogId,
-              catalogId,
-              PolarisEntityType.CATALOG_ROLE,
-              PageToken.fromLimit(2),
-              entity -> true,
-              Function.identity()).data;
+                  callCtx,
+                  catalogId,
+                  catalogId,
+                  PolarisEntityType.CATALOG_ROLE,
+                  PageToken.fromLimit(2),
+                  entity -> true,
+                  Function.identity())
+              .data;
 
       // if we have 2, we cannot drop the catalog. If only one left, better be the admin role
       if (catalogRoles.size() > 1) {

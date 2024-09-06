@@ -47,7 +47,6 @@ import org.apache.iceberg.rest.requests.ReportMetricsRequest;
 import org.apache.iceberg.rest.requests.UpdateNamespacePropertiesRequest;
 import org.apache.iceberg.rest.requests.UpdateTableRequest;
 import org.apache.iceberg.rest.responses.ConfigResponse;
-import org.apache.iceberg.rest.responses.ListTablesResponse;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
 import org.apache.polaris.core.catalog.PageToken;
@@ -129,9 +128,11 @@ public class IcebergCatalogAdapter
       SecurityContext securityContext) {
     Optional<Namespace> namespaceOptional =
         Optional.ofNullable(parent).map(IcebergCatalogAdapter::decodeNamespace);
+
+    PageToken token = PageToken.fromString(pageToken).withPageSize(pageSize);
     return Response.ok(
-            newHandlerWrapper(securityContext, prefix)
-                .listNamespaces(namespaceOptional.orElse(Namespace.of())))
+        newHandlerWrapper(securityContext, prefix)
+            .listNamespaces(namespaceOptional.orElse(Namespace.of()), token))
         .build();
   }
 
@@ -218,10 +219,11 @@ public class IcebergCatalogAdapter
     Namespace ns = decodeNamespace(namespace);
 
     PageToken token = PageToken.fromString(pageToken).withPageSize(pageSize);
-    PolarisPage<TableIdentifier> result = newHandlerWrapper(securityContext, prefix).listTables(ns, token);
-    ListTablesResponseWithPageToken response = ListTablesResponseWithPageToken.fromPolarisPage(result);
 
-    return Response.ok(response).build();
+    return Response.ok(
+        newHandlerWrapper(securityContext, prefix)
+            .listTables(ns, token))
+        .build();
   }
 
   @Override
