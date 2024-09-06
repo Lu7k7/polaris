@@ -1016,6 +1016,21 @@ public class PolarisCatalogHandlerWrapper {
     return doCatalogOperation(() -> CatalogHandlers.listViews(viewCatalog, namespace));
   }
 
+  public ListTablesResponseWithPageToken listViews(Namespace namespace, PageToken pageToken) {
+    PolarisAuthorizableOperation op = PolarisAuthorizableOperation.LIST_VIEWS;
+    authorizeBasicNamespaceOperationOrThrow(op, namespace);
+
+    if (baseCatalog instanceof BasePolarisCatalog bpc) {
+      return ListTablesResponseWithPageToken.fromPolarisPage(
+          doCatalogOperation(() -> bpc.listViews(namespace, pageToken)));
+    } else {
+      return ListTablesResponseWithPageToken.fromPolarisPage(
+          PolarisPage.fromData(
+              doCatalogOperation(() -> CatalogHandlers.listTables(baseCatalog, namespace))
+                  .identifiers()));
+    }
+  }
+
   public LoadViewResponse createView(Namespace namespace, CreateViewRequest request) {
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.CREATE_VIEW;
     authorizeCreateTableLikeUnderNamespaceOperationOrThrow(

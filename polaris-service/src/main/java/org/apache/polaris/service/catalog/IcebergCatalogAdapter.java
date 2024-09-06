@@ -352,7 +352,8 @@ public class IcebergCatalogAdapter
       Integer pageSize,
       SecurityContext securityContext) {
     Namespace ns = decodeNamespace(namespace);
-    return Response.ok(newHandlerWrapper(securityContext, prefix).listViews(ns)).build();
+    PageToken token = PageToken.fromString(pageToken).withPageSize(pageSize);
+    return Response.ok(newHandlerWrapper(securityContext, prefix).listViews(ns, token)).build();
   }
 
   @Override

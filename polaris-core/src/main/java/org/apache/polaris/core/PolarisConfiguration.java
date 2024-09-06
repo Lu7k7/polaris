@@ -150,4 +150,11 @@ public class PolarisConfiguration<T> {
               "If set to true, allows tables to have external locations outside the default structure.")
           .defaultValue(false)
           .build();
+
+  public static final PolarisConfiguration<Boolean> PAGINATION_ENABLED =
+      PolarisConfiguration.<Boolean>builder()
+          .key("PAGINATION_ENABLED")
+          .description("If set to true, pagination for APIs like listTables is enabled")
+          .defaultValue(true)
+          .build();
 }

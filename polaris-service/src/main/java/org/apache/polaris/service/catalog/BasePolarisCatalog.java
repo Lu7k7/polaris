@@ -449,6 +449,14 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
     return true;
   }
 
+  private boolean paginationEnabled() {
+    return callContext
+        .getPolarisCallContext()
+        .getConfigurationStore()
+        .getConfiguration(
+            callContext.getPolarisCallContext(), PolarisConfiguration.PAGINATION_ENABLED);
+  }
+
   @Override
   public List<TableIdentifier> listTables(Namespace namespace) {
     return listTables(namespace, PageToken.readEverything()).data;
@@ -458,6 +466,9 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
     if (!namespaceExists(namespace) && !namespace.isEmpty()) {
       throw new NoSuchNamespaceException(
           "Cannot list tables for namespace. Namespace does not exist: %s", namespace);
+    }
+    if (!paginationEnabled()) {
+      return PolarisPage.fromData(listViews(namespace));
     }
 
     return listTableLike(PolarisEntitySubType.TABLE, namespace, pageToken);
@@ -758,6 +769,9 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
     if (resolvedEntities == null) {
       throw new NoSuchNamespaceException("Namespace does not exist: %s", namespace);
     }
+    if (!paginationEnabled()) {
+      return PolarisPage.fromData(listNamespaces(namespace));
+    }
 
     List<PolarisEntity> catalogPath = resolvedEntities.getRawFullPath();
     PolarisMetaStoreManager.ListEntitiesResult listResult =
@@ -784,16 +798,19 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
 
   @Override
   public List<TableIdentifier> listViews(Namespace namespace) {
-    return listViews(namespace, PageToken.readEverything());
+    return listViews(namespace, PageToken.readEverything()).data;
   }
 
-  public List<TableIdentifier> listViews(Namespace namespace, PageToken pageToken) {
+  public PolarisPage<TableIdentifier> listViews(Namespace namespace, PageToken pageToken) {
     if (!namespaceExists(namespace) && !namespace.isEmpty()) {
       throw new NoSuchNamespaceException(
           "Cannot list views for namespace. Namespace does not exist: %s", namespace);
     }
+    if (!paginationEnabled()) {
+      return PolarisPage.fromData(listViews(namespace));
+    }
 
-    return listTableLike(PolarisEntitySubType.VIEW, namespace, pageToken).data;
+    return listTableLike(PolarisEntitySubType.VIEW, namespace, pageToken);
   }
 
   @Override

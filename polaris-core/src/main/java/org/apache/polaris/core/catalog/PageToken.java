@@ -22,7 +22,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 
-/** Represents a page token */
+/**
+ * Represents a page token that can be used by operations like `listTables`. Clients that specify a
+ * `pageSize` (or a `pageToken`) may receive a `next-page-token` in the response, the content of
+ * which is a serialized PageToken.
+ *
+ * <p>By providing that in the next query's `pageToken`, the client can resume listing where they
+ * left off. If the client provides a `pageToken` or `pageSize` but `next-page-token` is null in the
+ * response, that means there is no more data to read.
+ */
 public class PageToken {
 
   public final int offset;
@@ -39,17 +47,17 @@ public class PageToken {
     this.pageSize = pageSize;
   }
 
-  /** Construct a PaginationToken from a plain limit */
+  /** Construct a PageToken from a plain limit */
   public static PageToken fromLimit(int limit) {
     return new PageToken(TOKEN_START, limit);
   }
 
-  /** Construct a PaginationToken from a plain limit */
+  /** Construct a PageToken to read everything */
   public static PageToken readEverything() {
     return new PageToken(TOKEN_START, Integer.MAX_VALUE);
   }
 
-  /** Decode a token string into a PaginationToken object */
+  /** Deserialize a token string into a PageToken object */
   public static PageToken fromString(String tokenString) {
     if (tokenString == null || tokenString.isEmpty()) {
       return PageToken.readEverything();
@@ -84,14 +92,19 @@ public class PageToken {
     }
   }
 
+  /**
+   * Return a new PageToken with an updated pageSize. If the pageSize provided is null, the existing
+   * pageSize will be preserved.
+   */
   public PageToken withPageSize(Integer pageSize) {
     if (pageSize == null) {
-      return this;
+      return new PageToken(this.offset, this.pageSize);
     } else {
       return new PageToken(this.offset, pageSize);
     }
   }
 
+  /** Serialize a PageToken into a string */
   @Override
   public String toString() {
     String tokenContent = TOKEN_PREFIX + ":" + offset + ":" + pageSize;
