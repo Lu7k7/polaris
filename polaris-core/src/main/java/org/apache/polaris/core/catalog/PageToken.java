@@ -52,7 +52,7 @@ public class PageToken {
   /** Decode a token string into a PaginationToken object */
   public static PageToken fromString(String tokenString) {
     if (tokenString == null || tokenString.isEmpty()) {
-      return new PageToken(TOKEN_START, DEFAULT_PAGE_SIZE);
+      return PageToken.readEverything();
     }
 
     try {
@@ -72,16 +72,23 @@ public class PageToken {
     }
   }
 
-  /** Builds a new page token to reflect new data that's been read */
+  /**
+   * Builds a new page token to reflect new data that's been read. If the amount of data read is
+   * less than the pageSize, this will return `PageToken.DONE` (done)
+   */
   public PageToken updated(List<?> newData) {
-    return new PageToken(offset + newData.size(), pageSize);
+    if (newData == null || newData.isEmpty() || newData.size() < pageSize) {
+      return PageToken.DONE;
+    } else {
+      return new PageToken(offset + newData.size(), pageSize);
+    }
   }
 
   public PageToken withPageSize(Integer pageSize) {
     if (pageSize == null) {
       return this;
     } else {
-      return new PageToken(offset, pageSize);
+      return new PageToken(this.offset, pageSize);
     }
   }
 

@@ -345,7 +345,7 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
         catalogId,
         parentId,
         entityType,
-        PageToken.readEverything(),
+        pageToken,
         entityFilter,
         entity ->
             new PolarisEntityActiveRecord(

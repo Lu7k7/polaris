@@ -28,7 +28,6 @@ import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.catalog.PolarisPage;
 
 public class ListTablesResponseWithPageToken extends ListTablesResponse {
-  @JsonProperty("next-page-token")
   private final PageToken pageToken;
 
   private final List<TableIdentifier> identifiers;
@@ -44,8 +43,13 @@ public class ListTablesResponseWithPageToken extends ListTablesResponse {
     return new ListTablesResponseWithPageToken(polarisPage.pageToken, polarisPage.data);
   }
 
-  public PageToken getPageToken() {
-    return pageToken;
+  @JsonProperty("next-page-token")
+  public String getPageToken() {
+    if (pageToken == null) {
+      return null;
+    } else {
+      return pageToken.toString();
+    }
   }
 
   @Override

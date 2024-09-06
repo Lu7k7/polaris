@@ -316,7 +316,7 @@ public interface PolarisMetaStoreManager {
 
     public static ListEntitiesResult fromPolarisPage(
         PolarisPage<PolarisEntityActiveRecord> polarisPage) {
-      return new ListEntitiesResult(polarisPage.data, Optional.of(polarisPage.pageToken));
+      return new ListEntitiesResult(polarisPage.data, Optional.ofNullable(polarisPage.pageToken));
     }
 
     /**
@@ -687,7 +687,7 @@ public interface PolarisMetaStoreManager {
     private final Optional<PageToken> pageTokenOpt;
 
     public static EntitiesResult fromPolarisPage(PolarisPage<PolarisBaseEntity> polarisPage) {
-      return new EntitiesResult(polarisPage.data, Optional.of(polarisPage.pageToken));
+      return new EntitiesResult(polarisPage.data, Optional.ofNullable(polarisPage.pageToken));
     }
 
     /**

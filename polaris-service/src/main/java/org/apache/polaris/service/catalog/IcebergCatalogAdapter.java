@@ -217,7 +217,6 @@ public class IcebergCatalogAdapter
     Namespace ns = decodeNamespace(namespace);
 
     PageToken token = PageToken.fromString(pageToken).withPageSize(pageSize);
-
     return Response.ok(newHandlerWrapper(securityContext, prefix).listTables(ns, token)).build();
   }
 

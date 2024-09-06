@@ -28,7 +28,6 @@ import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.catalog.PolarisPage;
 
 public class ListNamespacesResponseWithPageToken extends ListNamespacesResponse {
-  @JsonProperty("next-page-token")
   private final PageToken pageToken;
 
   private final List<Namespace> namespaces;
@@ -44,8 +43,13 @@ public class ListNamespacesResponseWithPageToken extends ListNamespacesResponse 
     return new ListNamespacesResponseWithPageToken(polarisPage.pageToken, polarisPage.data);
   }
 
-  public PageToken getPageToken() {
-    return pageToken;
+  @JsonProperty("next-page-token")
+  public String getPageToken() {
+    if (pageToken == null) {
+      return null;
+    } else {
+      return pageToken.toString();
+    }
   }
 
   @Override
@@ -57,7 +61,7 @@ public class ListNamespacesResponseWithPageToken extends ListNamespacesResponse 
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add("namespaces", this.namespaces)
-        .add("pageToken", this.pageToken)
+        .add("pageToken", this.pageToken.toString())
         .toString();
   }
 }

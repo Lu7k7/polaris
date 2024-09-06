@@ -781,7 +781,8 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
   }
 
   /**
-   * See {@link #listEntities(PolarisCallContext, List, PolarisEntityType, PolarisEntitySubType)}
+   * See {@link #listEntities(PolarisCallContext, List, PolarisEntityType, PolarisEntitySubType,
+   * PageToken)}
    */
   private @NotNull ListEntitiesResult listEntities(
       @NotNull PolarisCallContext callCtx,
@@ -808,7 +809,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
     if (entitySubType != PolarisEntitySubType.ANY_SUBTYPE) {
       resultPage =
           new PolarisPage<PolarisEntityActiveRecord>(
-              resultPage.pageToken,
+              pageToken.updated(resultPage.data),
               resultPage.data.stream()
                   .filter(rec -> rec.getSubTypeCode() == entitySubType.getCode())
                   .collect(Collectors.toList()));
