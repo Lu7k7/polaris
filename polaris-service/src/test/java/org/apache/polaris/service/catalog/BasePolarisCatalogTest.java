@@ -63,6 +63,7 @@ import org.apache.polaris.core.admin.model.StorageConfigInfo;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
 import org.apache.polaris.core.catalog.PageToken;
+import org.apache.polaris.core.catalog.PolarisPage;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.CatalogEntity;
@@ -1242,5 +1243,106 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
                 .getEntities()
                 .getFirst()));
     Assertions.assertThat(measured.getNumDeletedFiles()).as("A table was deleted").isGreaterThan(0);
+  }
+
+  @Test
+  public void testPaginatedListTables() {
+    if (this.requiresNamespaceCreate()) {
+      ((SupportsNamespaces) catalog).createNamespace(NS);
+    }
+
+    for (int i = 0; i < 5; i++) {
+      catalog.buildTable(TableIdentifier.of(NS, "pagination_table_" + i), SCHEMA).create();
+    }
+
+    try {
+      // List without pagination
+      Assertions.assertThat(catalog.listTables(NS)).isNotNull().hasSize(5);
+
+      // List with a limit:
+      PolarisPage<?> firstListResult = catalog.listTables(NS, PageToken.fromLimit(2));
+      Assertions.assertThat(firstListResult.data.size()).isEqualTo(2);
+      Assertions.assertThat(firstListResult.pageToken.toString()).isNotNull().isNotEmpty();
+
+      // List using the previously obtained token:
+      PolarisPage<?> secondListResult = catalog.listTables(NS, firstListResult.pageToken);
+      Assertions.assertThat(secondListResult.data.size()).isEqualTo(2);
+      Assertions.assertThat(secondListResult.pageToken.toString()).isNotNull().isNotEmpty();
+
+      // List using the final token:
+      PolarisPage<?> finalListResult = catalog.listTables(NS, secondListResult.pageToken);
+      Assertions.assertThat(finalListResult.data.size()).isEqualTo(1);
+      Assertions.assertThat(finalListResult.pageToken).isNull();
+    } finally {
+      for (int i = 0; i < 5; i++) {
+        catalog.dropTable(TableIdentifier.of(NS, "pagination_table_" + i));
+      }
+    }
+  }
+
+  @Test
+  public void testPaginatedListViews() {
+    if (this.requiresNamespaceCreate()) {
+      ((SupportsNamespaces) catalog).createNamespace(NS);
+    }
+
+    for (int i = 0; i < 5; i++) {
+      catalog.buildView(TableIdentifier.of(NS, "pagination_view_" + i)).create();
+    }
+
+    try {
+      // List without pagination
+      Assertions.assertThat(catalog.listViews(NS)).isNotNull().hasSize(5);
+
+      // List with a limit:
+      PolarisPage<?> firstListResult = catalog.listViews(NS, PageToken.fromLimit(2));
+      Assertions.assertThat(firstListResult.data.size()).isEqualTo(2);
+      Assertions.assertThat(firstListResult.pageToken.toString()).isNotNull().isNotEmpty();
+
+      // List using the previously obtained token:
+      PolarisPage<?> secondListResult = catalog.listViews(NS, firstListResult.pageToken);
+      Assertions.assertThat(secondListResult.data.size()).isEqualTo(2);
+      Assertions.assertThat(secondListResult.pageToken.toString()).isNotNull().isNotEmpty();
+
+      // List using the final token:
+      PolarisPage<?> finalListResult = catalog.listViews(NS, secondListResult.pageToken);
+      Assertions.assertThat(finalListResult.data.size()).isEqualTo(1);
+      Assertions.assertThat(finalListResult.pageToken).isNull();
+    } finally {
+      for (int i = 0; i < 5; i++) {
+        catalog.dropTable(TableIdentifier.of(NS, "pagination_view_" + i));
+      }
+    }
+  }
+
+  @Test
+  public void testPaginatedListNamespaces() {
+    for (int i = 0; i < 5; i++) {
+      catalog.createNamespace(Namespace.of("pagination_namespace_" + i));
+    }
+
+    try {
+      // List without pagination
+      Assertions.assertThat(catalog.listNamespaces()).isNotNull().hasSize(5);
+
+      // List with a limit:
+      PolarisPage<?> firstListResult = catalog.listNamespaces(PageToken.fromLimit(2));
+      Assertions.assertThat(firstListResult.data.size()).isEqualTo(2);
+      Assertions.assertThat(firstListResult.pageToken.toString()).isNotNull().isNotEmpty();
+
+      // List using the previously obtained token:
+      PolarisPage<?> secondListResult = catalog.listNamespaces(firstListResult.pageToken);
+      Assertions.assertThat(secondListResult.data.size()).isEqualTo(2);
+      Assertions.assertThat(secondListResult.pageToken.toString()).isNotNull().isNotEmpty();
+
+      // List using the final token:
+      PolarisPage<?> finalListResult = catalog.listNamespaces(secondListResult.pageToken);
+      Assertions.assertThat(finalListResult.data.size()).isEqualTo(1);
+      Assertions.assertThat(finalListResult.pageToken).isNull();
+    } finally {
+      for (int i = 0; i < 5; i++) {
+        catalog.dropNamespace(Namespace.of("pagination_namespace_" + i));
+      }
+    }
   }
 }
