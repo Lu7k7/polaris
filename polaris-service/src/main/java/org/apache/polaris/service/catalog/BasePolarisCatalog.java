@@ -29,6 +29,7 @@ import jakarta.ws.rs.BadRequestException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -79,6 +80,7 @@ import org.apache.polaris.core.PolarisCallContext;
 import org.apache.polaris.core.PolarisConfiguration;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.catalog.PolarisCatalogHelpers;
+import org.apache.polaris.core.catalog.PolarisPage;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.entity.CatalogEntity;
 import org.apache.polaris.core.entity.NamespaceEntity;
@@ -448,7 +450,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
   }
 
   @Override
-  public List<TableIdentifier> listTables(Namespace namespace) {
+  public PolarisPage<TableIdentifier> listTables(Namespace namespace) {
     if (!namespaceExists(namespace) && !namespace.isEmpty()) {
       throw new NoSuchNamespaceException(
           "Cannot list tables for namespace. Namespace does not exist: %s", namespace);
@@ -772,7 +774,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
           "Cannot list views for namespace. Namespace does not exist: %s", namespace);
     }
 
-    return listTableLike(PolarisEntitySubType.VIEW, namespace);
+    return listTableLike(PolarisEntitySubType.VIEW, namespace).data;
   }
 
   @Override
@@ -1935,7 +1937,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
     }
   }
 
-  private List<TableIdentifier> listTableLike(PolarisEntitySubType subType, Namespace namespace) {
+  private PolarisPage<TableIdentifier> listTableLike(PolarisEntitySubType subType, Namespace namespace) {
     PolarisResolvedPathWrapper resolvedEntities = resolvedEntityView.getResolvedPath(namespace);
     if (resolvedEntities == null) {
       // Illegal state because the namespace should've already been in the static resolution set.
@@ -1944,17 +1946,17 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
     }
 
     List<PolarisEntity> catalogPath = resolvedEntities.getRawFullPath();
-    List<PolarisEntity.NameAndId> entities =
-        PolarisEntity.toNameAndIdList(
-            entityManager
-                .getMetaStoreManager()
-                .listEntities(
-                    getCurrentPolarisContext(),
-                    PolarisEntity.toCoreList(catalogPath),
-                    PolarisEntityType.TABLE_LIKE,
-                    subType)
-                .getEntities());
-    return PolarisCatalogHelpers.nameAndIdToTableIdentifiers(catalogPath, entities);
+    PolarisMetaStoreManager.ListEntitiesResult listResult =
+        entityManager
+            .getMetaStoreManager()
+            .listEntities(
+                getCurrentPolarisContext(),
+                PolarisEntity.toCoreList(catalogPath),
+                PolarisEntityType.TABLE_LIKE,
+                subType);
+    List<PolarisEntity.NameAndId> entities = PolarisEntity.toNameAndIdList(listResult.getEntities());
+    List<TableIdentifier> identifiers = PolarisCatalogHelpers.nameAndIdToTableIdentifiers(catalogPath, entities);
+    return PolarisPage.fromData(identifiers);
   }
 
   /**

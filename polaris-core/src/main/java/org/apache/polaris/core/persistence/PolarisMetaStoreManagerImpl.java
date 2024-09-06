@@ -30,12 +30,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.PolarisCallContext;
+import org.apache.polaris.core.catalog.PolarisPage;
 import org.apache.polaris.core.entity.AsyncTaskType;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
@@ -793,24 +795,25 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
 
     // return if we failed to resolve
     if (resolver.isFailure()) {
-      return new ListEntitiesResult(ReturnStatus.CATALOG_PATH_CANNOT_BE_RESOLVED, null);
+      return new ListEntitiesResult(ReturnStatus.CATALOG_PATH_CANNOT_BE_RESOLVED, null, Optional.empty());
     }
 
     // return list of active entities
-    List<PolarisEntityActiveRecord> toreturnList =
+    PolarisPage<PolarisEntityActiveRecord> resultPage =
         ms.listActiveEntities(
             callCtx, resolver.getCatalogIdOrNull(), resolver.getParentId(), entityType);
 
     // prune the returned list with only entities matching the entity subtype
     if (entitySubType != PolarisEntitySubType.ANY_SUBTYPE) {
-      toreturnList =
-          toreturnList.stream()
-              .filter(rec -> rec.getSubTypeCode() == entitySubType.getCode())
-              .collect(Collectors.toList());
+      resultPage = new PolarisPage<PolarisEntityActiveRecord>(
+          resultPage.pageToken,
+          resultPage.data.stream()
+            .filter(rec -> rec.getSubTypeCode() == entitySubType.getCode())
+            .collect(Collectors.toList()));
     }
 
     // done
-    return new ListEntitiesResult(toreturnList);
+    return ListEntitiesResult.fromPolarisPage(resultPage);
   }
 
   /** {@inheritDoc} */
@@ -1199,7 +1202,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
             }
             createdEntities.add(entityCreateResult.getEntity());
           }
-          return new EntitiesResult(createdEntities);
+          return new EntitiesResult(new PolarisPage<>(createdEntities));
         });
   }
 
@@ -1485,7 +1488,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
               PolarisEntityType.CATALOG_ROLE,
               PageToken.fromLimit(2),
               entity -> true,
-              Function.identity());
+              Function.identity()).data;
 
       // if we have 2, we cannot drop the catalog. If only one left, better be the admin role
       if (catalogRoles.size() > 1) {
@@ -2018,7 +2021,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
       PageToken pageToken) {
 
     // find all available tasks
-    List<PolarisBaseEntity> availableTasks =
+    PolarisPage<PolarisBaseEntity> availableTasks =
         ms.listActiveEntities(
             callCtx,
             PolarisEntityConstants.getRootEntityId(),
@@ -2041,7 +2044,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
             },
             Function.identity());
 
-    availableTasks.forEach(
+    availableTasks.data.forEach(
         task -> {
           Map<String, String> properties =
               PolarisObjectMapperUtil.deserializeProperties(callCtx, task.getProperties());
@@ -2058,7 +2061,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
           task.setProperties(PolarisObjectMapperUtil.serializeProperties(callCtx, properties));
           writeEntity(callCtx, ms, task, false);
         });
-    return new EntitiesResult(availableTasks);
+    return EntitiesResult.fromPolarisPage(availableTasks);
   }
 
   @Override

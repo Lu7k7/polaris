@@ -21,15 +21,21 @@ package org.apache.polaris.core.catalog;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 
+/**
+ * Represents a page token
+ */
 public class PageToken {
 
     public final long offset;
     public final long pageSize;
 
-    public static final String TOKEN_PREFIX = "polaris";
-    public static final long TOKEN_START = 0;
-    public static final long DEFAULT_PAGE_SIZE = 1000;
+    private static final String TOKEN_PREFIX = "polaris";
+    private static final long TOKEN_START = 0;
+    private static final long DEFAULT_PAGE_SIZE = 1000;
+
+    public static PageToken DONE = null;
 
     public PageToken(long offset, long pageSize) {
         this.offset = offset;
@@ -77,6 +83,13 @@ public class PageToken {
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to decode token: " + tokenString, e);
         }
+    }
+
+    /**
+     * Builds a new page token to reflect new data that's been read
+     */
+    public PageToken updated(List<?> newData) {
+        return new PageToken(offset + newData.size(), pageSize);
     }
 
     @Override
