@@ -760,18 +760,21 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
     }
 
     List<PolarisEntity> catalogPath = resolvedEntities.getRawFullPath();
-    PolarisMetaStoreManager.ListEntitiesResult listResult = entityManager
-        .getMetaStoreManager()
-        .listEntities(
-            getCurrentPolarisContext(),
-            PolarisEntity.toCoreList(catalogPath),
-            PolarisEntityType.NAMESPACE,
-            PolarisEntitySubType.NULL_SUBTYPE,
-            pageToken);
-    List<PolarisEntity.NameAndId> entities = PolarisEntity.toNameAndIdList(listResult.getEntities());
+    PolarisMetaStoreManager.ListEntitiesResult listResult =
+        entityManager
+            .getMetaStoreManager()
+            .listEntities(
+                getCurrentPolarisContext(),
+                PolarisEntity.toCoreList(catalogPath),
+                PolarisEntityType.NAMESPACE,
+                PolarisEntitySubType.NULL_SUBTYPE,
+                pageToken);
+    List<PolarisEntity.NameAndId> entities =
+        PolarisEntity.toNameAndIdList(listResult.getEntities());
     List<Namespace> namespaces = PolarisCatalogHelpers.nameAndIdToNamespaces(catalogPath, entities);
 
-    return listResult.getPageToken()
+    return listResult
+        .getPageToken()
         .map(token -> new PolarisPage<>(token, namespaces))
         .orElseGet(() -> PolarisPage.fromData(namespaces));
   }
@@ -1979,7 +1982,8 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
     List<TableIdentifier> identifiers =
         PolarisCatalogHelpers.nameAndIdToTableIdentifiers(catalogPath, entities);
 
-    return listResult.getPageToken()
+    return listResult
+        .getPageToken()
         .map(token -> new PolarisPage<>(token, identifiers))
         .orElseGet(() -> PolarisPage.fromData(identifiers));
   }

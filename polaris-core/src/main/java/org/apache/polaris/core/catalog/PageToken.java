@@ -68,7 +68,7 @@ public class PageToken {
 
       return new PageToken(offset, pageSize);
     } catch (Exception e) {
-      throw new IllegalArgumentException("Failed to decode token: " + tokenString, e);
+      throw new IllegalArgumentException("Failed to decode page token: " + tokenString, e);
     }
   }
 

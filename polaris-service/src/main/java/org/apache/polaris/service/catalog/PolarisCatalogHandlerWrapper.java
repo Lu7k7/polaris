@@ -418,11 +418,11 @@ public class PolarisCatalogHandlerWrapper {
     authorizeBasicNamespaceOperationOrThrow(op, parent);
 
     if (baseCatalog instanceof BasePolarisCatalog bpc) {
-      ListNamespacesResponseWithPageToken
-          .fromPolarisPage(doCatalogOperation(() -> bpc.listNamespaces(parent, pageToken)));
+      return ListNamespacesResponseWithPageToken.fromPolarisPage(
+          doCatalogOperation(() -> bpc.listNamespaces(parent, pageToken)));
     } else {
-      return ListNamespacesResponseWithPageToken
-          .fromPolarisPage(PolarisPage.fromData(
+      return ListNamespacesResponseWithPageToken.fromPolarisPage(
+          PolarisPage.fromData(
               doCatalogOperation(() -> CatalogHandlers.listNamespaces(namespaceCatalog, parent))
                   .namespaces()));
     }

@@ -50,7 +50,6 @@ import org.apache.iceberg.rest.responses.ConfigResponse;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
 import org.apache.polaris.core.catalog.PageToken;
-import org.apache.polaris.core.catalog.PolarisPage;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.PolarisEntity;
@@ -64,7 +63,6 @@ import org.apache.polaris.service.config.RealmEntityManagerFactory;
 import org.apache.polaris.service.context.CallContextCatalogFactory;
 import org.apache.polaris.service.types.CommitTableRequest;
 import org.apache.polaris.service.types.CommitViewRequest;
-import org.apache.polaris.service.types.ListTablesResponseWithPageToken;
 import org.apache.polaris.service.types.NotificationRequest;
 
 /**
@@ -131,8 +129,8 @@ public class IcebergCatalogAdapter
 
     PageToken token = PageToken.fromString(pageToken).withPageSize(pageSize);
     return Response.ok(
-        newHandlerWrapper(securityContext, prefix)
-            .listNamespaces(namespaceOptional.orElse(Namespace.of()), token))
+            newHandlerWrapper(securityContext, prefix)
+                .listNamespaces(namespaceOptional.orElse(Namespace.of()), token))
         .build();
   }
 
@@ -220,10 +218,7 @@ public class IcebergCatalogAdapter
 
     PageToken token = PageToken.fromString(pageToken).withPageSize(pageSize);
 
-    return Response.ok(
-        newHandlerWrapper(securityContext, prefix)
-            .listTables(ns, token))
-        .build();
+    return Response.ok(newHandlerWrapper(securityContext, prefix).listTables(ns, token)).build();
   }
 
   @Override

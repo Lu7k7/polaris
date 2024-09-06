@@ -507,8 +507,10 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
       @NotNull PolarisCallContext callCtx,
       long catalogId,
       long parentId,
-      @NotNull PolarisEntityType entityType) {
-    return listActiveEntities(callCtx, catalogId, parentId, entityType, Predicates.alwaysTrue());
+      @NotNull PolarisEntityType entityType,
+      @NotNull PageToken pageToken) {
+    return listActiveEntities(
+        callCtx, catalogId, parentId, entityType, pageToken, Predicates.alwaysTrue());
   }
 
   @Override
@@ -517,6 +519,7 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
       long catalogId,
       long parentId,
       @NotNull PolarisEntityType entityType,
+      @NotNull PageToken pageToken,
       @NotNull Predicate<PolarisBaseEntity> entityFilter) {
     // full range scan under the parent for that type
     return listActiveEntities(
@@ -524,7 +527,7 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
         catalogId,
         parentId,
         entityType,
-        PageToken.readEverything(),
+        pageToken,
         entityFilter,
         entity ->
             new PolarisEntityActiveRecord(
