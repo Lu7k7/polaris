@@ -20,6 +20,7 @@ package org.apache.polaris.service.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Preconditions;
 import java.util.List;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.rest.responses.ListTablesResponse;
@@ -35,7 +36,7 @@ public class ListTablesResponseWithPageToken extends ListTablesResponse {
   public ListTablesResponseWithPageToken(PageToken pageToken, List<TableIdentifier> identifiers) {
     this.pageToken = pageToken;
     this.identifiers = identifiers;
-    this.validate();
+    Preconditions.checkArgument(this.identifiers != null, "Invalid identifier list: null");
   }
 
   public static ListTablesResponseWithPageToken fromPolarisPage(

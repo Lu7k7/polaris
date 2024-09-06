@@ -20,6 +20,7 @@ package org.apache.polaris.service.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Preconditions;
 import java.util.List;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.rest.responses.ListNamespacesResponse;
@@ -35,7 +36,7 @@ public class ListNamespacesResponseWithPageToken extends ListNamespacesResponse 
   public ListNamespacesResponseWithPageToken(PageToken pageToken, List<Namespace> namespaces) {
     this.pageToken = pageToken;
     this.namespaces = namespaces;
-    this.validate();
+    Preconditions.checkArgument(this.namespaces != null, "Invalid namespace: null");
   }
 
   public static ListNamespacesResponseWithPageToken fromPolarisPage(

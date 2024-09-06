@@ -128,10 +128,10 @@ public class IcebergCatalogAdapter
         Optional.ofNullable(parent).map(IcebergCatalogAdapter::decodeNamespace);
 
     PageToken token = PageToken.fromString(pageToken).withPageSize(pageSize);
-    return Response.ok(
-            newHandlerWrapper(securityContext, prefix)
-                .listNamespaces(namespaceOptional.orElse(Namespace.of()), token))
-        .build();
+    var response =
+        newHandlerWrapper(securityContext, prefix)
+            .listNamespaces(namespaceOptional.orElse(Namespace.of()), token);
+    return Response.ok(response).build();
   }
 
   @Override
