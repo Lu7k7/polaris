@@ -50,6 +50,7 @@ import javax.xml.xpath.XPathFactory;
 
 import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.PolarisCallContext;
+import org.apache.polaris.core.catalog.PolarisPage;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
@@ -503,7 +504,7 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
 
   /** {@inheritDoc} */
   @Override
-  public @NotNull List<PolarisEntityActiveRecord> listActiveEntities(
+  public @NotNull PolarisPage<PolarisEntityActiveRecord> listActiveEntities(
       @NotNull PolarisCallContext callCtx,
       long catalogId,
       long parentId,
@@ -512,7 +513,7 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
   }
 
   @Override
-  public @NotNull List<PolarisEntityActiveRecord> listActiveEntities(
+  public @NotNull PolarisPage<PolarisEntityActiveRecord> listActiveEntities(
       @NotNull PolarisCallContext callCtx,
       long catalogId,
       long parentId,
@@ -537,7 +538,7 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
   }
 
   @Override
-  public @NotNull <T> List<T> listActiveEntities(
+  public @NotNull <T> PolarisPage<T> listActiveEntities(
       @NotNull PolarisCallContext callCtx,
       long catalogId,
       long parentId,
@@ -545,16 +546,16 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
       @NotNull PageToken pageToken,
       @NotNull Predicate<PolarisBaseEntity> entityFilter,
       @NotNull Function<PolarisBaseEntity, T> transformer) {
-    // full range scan under the parent for that type
-    return this.store
+    List<T> data = this.store
         .lookupFullEntitiesActive(localSession.get(), catalogId, parentId, entityType)
         .stream()
         .map(ModelEntity::toEntity)
         .filter(entityFilter)
-//        .skip(paginationToken.offset())
-//        .limit(paginationToken.pageSize())
+        .skip(pageToken.offset)
+        .limit(pageToken.pageSize)
         .map(transformer)
         .collect(Collectors.toList());
+    return new PolarisPage<T>(pageToken.updated(data), data);
   }
 
   /** {@inheritDoc} */

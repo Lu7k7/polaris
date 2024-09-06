@@ -450,13 +450,13 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
   }
 
   @Override
-  public PolarisPage<TableIdentifier> listTables(Namespace namespace) {
+  public List<TableIdentifier> listTables(Namespace namespace) {
     if (!namespaceExists(namespace) && !namespace.isEmpty()) {
       throw new NoSuchNamespaceException(
           "Cannot list tables for namespace. Namespace does not exist: %s", namespace);
     }
 
-    return listTableLike(PolarisEntitySubType.TABLE, namespace);
+    return listTableLike(PolarisEntitySubType.TABLE, namespace).data;
   }
 
   @Override

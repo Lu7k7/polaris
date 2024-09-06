@@ -1202,7 +1202,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
             }
             createdEntities.add(entityCreateResult.getEntity());
           }
-          return new EntitiesResult(new PolarisPage<>(createdEntities));
+          return new EntitiesResult(createdEntities, Optional.empty());
         });
   }
 
@@ -1291,7 +1291,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
     }
 
     // good, all success
-    return new EntitiesResult(updatedEntities);
+    return new EntitiesResult(updatedEntities, Optional.empty());
   }
 
   /** {@inheritDoc} */
