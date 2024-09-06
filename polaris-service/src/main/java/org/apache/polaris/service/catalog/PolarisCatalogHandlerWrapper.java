@@ -71,7 +71,9 @@ import org.apache.iceberg.rest.responses.UpdateNamespacePropertiesResponse;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizableOperation;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
+import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.catalog.PolarisCatalogHelpers;
+import org.apache.polaris.core.catalog.PolarisPage;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.entity.CatalogEntity;
 import org.apache.polaris.core.entity.PolarisEntitySubType;
@@ -522,11 +524,20 @@ public class PolarisCatalogHandlerWrapper {
         () -> CatalogHandlers.updateNamespaceProperties(namespaceCatalog, namespace, request));
   }
 
-  public ListTablesResponse listTables(Namespace namespace) {
+  public ListTablesResponse listTables(Namespace namespace, PageToken pageToken) {
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.LIST_TABLES;
     authorizeBasicNamespaceOperationOrThrow(op, namespace);
 
-    return doCatalogOperation(() -> CatalogHandlers.listTables(baseCatalog, namespace));
+    if (baseCatalog instanceof BasePolarisCatalog bpc) {
+      PolarisPage<TableIdentifier> result = doCatalogOperation(() -> bpc.listTables(namespace, pageToken));
+      return ListTablesResponse
+          .builder()
+          .addAll(result.data)
+          .build();
+      // TODO where to add the next token header here?
+    } else {
+      return doCatalogOperation(() -> CatalogHandlers.listTables(baseCatalog, namespace));
+    }
   }
 
   public LoadTableResponse createTableDirect(Namespace namespace, CreateTableRequest request) {

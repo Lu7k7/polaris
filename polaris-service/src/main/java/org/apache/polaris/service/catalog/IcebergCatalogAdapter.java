@@ -49,6 +49,7 @@ import org.apache.iceberg.rest.requests.UpdateTableRequest;
 import org.apache.iceberg.rest.responses.ConfigResponse;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
+import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.PolarisEntity;
@@ -212,7 +213,11 @@ public class IcebergCatalogAdapter
       Integer pageSize,
       SecurityContext securityContext) {
     Namespace ns = decodeNamespace(namespace);
-    return Response.ok(newHandlerWrapper(securityContext, prefix).listTables(ns)).build();
+
+    PageToken token = PageToken.fromString(pageToken).withPageSize(pageSize);
+    newHandlerWrapper(securityContext, prefix).listTables(ns, token);
+
+    return Response.ok().build();
   }
 
   @Override

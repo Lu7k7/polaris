@@ -28,16 +28,16 @@ import java.util.List;
  */
 public class PageToken {
 
-    public final long offset;
-    public final long pageSize;
+    public final int offset;
+    public final int pageSize;
 
     private static final String TOKEN_PREFIX = "polaris";
-    private static final long TOKEN_START = 0;
-    private static final long DEFAULT_PAGE_SIZE = 1000;
+    private static final int TOKEN_START = 0;
+    private static final int DEFAULT_PAGE_SIZE = 1000;
 
     public static PageToken DONE = null;
 
-    public PageToken(long offset, long pageSize) {
+    public PageToken(int offset, int pageSize) {
         this.offset = offset;
         this.pageSize = pageSize;
     }
@@ -76,8 +76,8 @@ public class PageToken {
                 throw new IllegalArgumentException("Invalid token format");
             }
 
-            long offset = Long.parseLong(parts[1]);
-            long pageSize = Long.parseLong(parts[2]);
+            int offset = Integer.parseInt(parts[1]);
+            int pageSize = Integer.parseInt(parts[2]);
 
             return new PageToken(offset, pageSize);
         } catch (Exception e) {
@@ -90,6 +90,10 @@ public class PageToken {
      */
     public PageToken updated(List<?> newData) {
         return new PageToken(offset + newData.size(), pageSize);
+    }
+
+    public PageToken withPageSize(int pageSize) {
+        return new PageToken(offset, pageSize);
     }
 
     @Override

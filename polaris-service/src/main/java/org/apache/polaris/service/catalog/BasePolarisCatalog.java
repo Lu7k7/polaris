@@ -79,6 +79,7 @@ import org.apache.iceberg.view.ViewUtil;
 import org.apache.polaris.core.PolarisCallContext;
 import org.apache.polaris.core.PolarisConfiguration;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
+import org.apache.polaris.core.catalog.PageToken;
 import org.apache.polaris.core.catalog.PolarisCatalogHelpers;
 import org.apache.polaris.core.catalog.PolarisPage;
 import org.apache.polaris.core.context.CallContext;
@@ -451,12 +452,18 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
 
   @Override
   public List<TableIdentifier> listTables(Namespace namespace) {
+    return listTables(namespace, PageToken.readEverything()).data;
+  }
+
+  public PolarisPage<TableIdentifier> listTables(
+      Namespace namespace,
+      PageToken pageToken) {
     if (!namespaceExists(namespace) && !namespace.isEmpty()) {
       throw new NoSuchNamespaceException(
           "Cannot list tables for namespace. Namespace does not exist: %s", namespace);
     }
 
-    return listTableLike(PolarisEntitySubType.TABLE, namespace).data;
+    return listTableLike(PolarisEntitySubType.TABLE, namespace);
   }
 
   @Override
