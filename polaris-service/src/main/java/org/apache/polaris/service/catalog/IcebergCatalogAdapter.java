@@ -47,9 +47,11 @@ import org.apache.iceberg.rest.requests.ReportMetricsRequest;
 import org.apache.iceberg.rest.requests.UpdateNamespacePropertiesRequest;
 import org.apache.iceberg.rest.requests.UpdateTableRequest;
 import org.apache.iceberg.rest.responses.ConfigResponse;
+import org.apache.iceberg.rest.responses.ListTablesResponse;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
 import org.apache.polaris.core.catalog.PageToken;
+import org.apache.polaris.core.catalog.PolarisPage;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.PolarisEntity;
@@ -63,6 +65,7 @@ import org.apache.polaris.service.config.RealmEntityManagerFactory;
 import org.apache.polaris.service.context.CallContextCatalogFactory;
 import org.apache.polaris.service.types.CommitTableRequest;
 import org.apache.polaris.service.types.CommitViewRequest;
+import org.apache.polaris.service.types.ListTablesResponseWithPageToken;
 import org.apache.polaris.service.types.NotificationRequest;
 
 /**
@@ -215,9 +218,10 @@ public class IcebergCatalogAdapter
     Namespace ns = decodeNamespace(namespace);
 
     PageToken token = PageToken.fromString(pageToken).withPageSize(pageSize);
-    newHandlerWrapper(securityContext, prefix).listTables(ns, token);
+    PolarisPage<TableIdentifier> result = newHandlerWrapper(securityContext, prefix).listTables(ns, token);
+    ListTablesResponseWithPageToken response = ListTablesResponseWithPageToken.fromPolarisPage(result);
 
-    return Response.ok().build();
+    return Response.ok(response).build();
   }
 
   @Override

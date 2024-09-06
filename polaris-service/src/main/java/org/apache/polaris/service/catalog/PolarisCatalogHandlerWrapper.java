@@ -524,20 +524,23 @@ public class PolarisCatalogHandlerWrapper {
         () -> CatalogHandlers.updateNamespaceProperties(namespaceCatalog, namespace, request));
   }
 
-  public ListTablesResponse listTables(Namespace namespace, PageToken pageToken) {
+  public PolarisPage<TableIdentifier> listTables(Namespace namespace, PageToken pageToken) {
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.LIST_TABLES;
     authorizeBasicNamespaceOperationOrThrow(op, namespace);
 
     if (baseCatalog instanceof BasePolarisCatalog bpc) {
-      PolarisPage<TableIdentifier> result = doCatalogOperation(() -> bpc.listTables(namespace, pageToken));
-      return ListTablesResponse
-          .builder()
-          .addAll(result.data)
-          .build();
-      // TODO where to add the next token header here?
+      return doCatalogOperation(() -> bpc.listTables(namespace, pageToken));
     } else {
-      return doCatalogOperation(() -> CatalogHandlers.listTables(baseCatalog, namespace));
+      return PolarisPage.fromData(
+          doCatalogOperation(() -> CatalogHandlers.listTables(baseCatalog, namespace)).identifiers());
     }
+  }
+
+  public ListTablesResponse listTables(Namespace namespace) {
+    PolarisAuthorizableOperation op = PolarisAuthorizableOperation.LIST_TABLES;
+    authorizeBasicNamespaceOperationOrThrow(op, namespace);
+
+    return doCatalogOperation(() -> CatalogHandlers.listTables(baseCatalog, namespace));
   }
 
   public LoadTableResponse createTableDirect(Namespace namespace, CreateTableRequest request) {

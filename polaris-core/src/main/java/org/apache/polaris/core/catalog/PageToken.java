@@ -64,10 +64,6 @@ public class PageToken {
             return new PageToken(TOKEN_START, DEFAULT_PAGE_SIZE);
         }
 
-        if (!tokenString.startsWith(TOKEN_PREFIX)) {
-            throw new IllegalArgumentException("Invalid token format");
-        }
-
         try {
             String decoded = new String(Base64.getDecoder().decode(tokenString), StandardCharsets.UTF_8);
             String[] parts = decoded.split(":");
@@ -92,13 +88,32 @@ public class PageToken {
         return new PageToken(offset + newData.size(), pageSize);
     }
 
-    public PageToken withPageSize(int pageSize) {
-        return new PageToken(offset, pageSize);
+    public PageToken withPageSize(Integer pageSize) {
+        if (pageSize == null) {
+            return this;
+        } else {
+            return new PageToken(offset, pageSize);
+        }
     }
 
     @Override
     public String toString() {
         String tokenContent = TOKEN_PREFIX + ":" + offset + ":" + pageSize;
         return Base64.getEncoder().encodeToString(tokenContent.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof PageToken) {
+            PageToken other = (PageToken)o;
+            return offset == other.offset && pageSize == other.pageSize;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return offset + pageSize;
     }
 }
