@@ -1339,6 +1339,16 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
       PolarisPage<?> finalListResult = catalog.listNamespaces(secondListResult.pageToken);
       Assertions.assertThat(finalListResult.data.size()).isEqualTo(1);
       Assertions.assertThat(finalListResult.pageToken).isNull();
+
+      // List with large page size
+      PolarisPage<?> exactListResult = catalog.listNamespaces(PageToken.fromLimit(5));
+      Assertions.assertThat(exactListResult.data.size()).isEqualTo(5);
+      Assertions.assertThat(exactListResult.pageToken).isNull();
+
+      // List with huge page size:
+      PolarisPage<?> bigListResult = catalog.listNamespaces(PageToken.fromLimit(9999));
+      Assertions.assertThat(bigListResult.data.size()).isEqualTo(5);
+      Assertions.assertThat(bigListResult.pageToken).isNull();
     } finally {
       for (int i = 0; i < 5; i++) {
         catalog.dropNamespace(Namespace.of("pagination_namespace_" + i));
