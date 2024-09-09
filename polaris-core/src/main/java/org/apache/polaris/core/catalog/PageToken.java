@@ -43,6 +43,11 @@ public class PageToken {
   public static PageToken DONE = null;
 
   public PageToken(int offset, int pageSize) {
+    if (offset < 0 || pageSize <= 0) {
+      throw new IllegalArgumentException(
+          "Invalid token content (offset / pageSize): " + offset + " / " + pageSize);
+    }
+
     this.offset = offset;
     this.pageSize = pageSize;
   }

@@ -763,7 +763,8 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
     return listNamespaces(namespace, PageToken.readEverything()).data;
   }
 
-  public PolarisPage<Namespace> listNamespaces(PageToken pageToken) throws NoSuchNamespaceException {
+  public PolarisPage<Namespace> listNamespaces(PageToken pageToken)
+      throws NoSuchNamespaceException {
     return listNamespaces(Namespace.empty(), pageToken);
   }
 
