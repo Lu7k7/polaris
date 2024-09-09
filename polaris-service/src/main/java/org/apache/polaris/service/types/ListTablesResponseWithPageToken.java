@@ -24,8 +24,8 @@ import com.google.common.base.Preconditions;
 import java.util.List;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.rest.responses.ListTablesResponse;
-import org.apache.polaris.core.catalog.PageToken;
-import org.apache.polaris.core.catalog.PolarisPage;
+import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.PolarisPage;
 
 public class ListTablesResponseWithPageToken extends ListTablesResponse {
   private final PageToken pageToken;

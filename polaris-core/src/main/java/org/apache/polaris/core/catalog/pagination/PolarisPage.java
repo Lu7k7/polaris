@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.polaris.core.catalog;
+package org.apache.polaris.core.catalog.pagination;
 
 import java.util.List;
 

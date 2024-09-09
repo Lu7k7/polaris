@@ -48,8 +48,9 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import org.apache.polaris.core.PolarisCallContext;
-import org.apache.polaris.core.catalog.PageToken;
-import org.apache.polaris.core.catalog.PolarisPage;
+import org.apache.polaris.core.catalog.pagination.EntityIdPageToken;
+import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.PolarisPage;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
@@ -550,12 +551,10 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
       @NotNull Function<PolarisBaseEntity, T> transformer) {
     List<T> data =
         this.store
-            .lookupFullEntitiesActive(localSession.get(), catalogId, parentId, entityType)
-            .stream()
+            .lookupFullEntitiesActive(
+                localSession.get(), catalogId, parentId, entityType, pageToken)
             .map(ModelEntity::toEntity)
             .filter(entityFilter)
-            .skip(pageToken.offset)
-            .limit(pageToken.pageSize)
             .map(transformer)
             .collect(Collectors.toList());
     return pageToken.buildNextPage(data);
@@ -767,5 +766,10 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
     if (session != null) {
       session.getTransaction().rollback();
     }
+  }
+
+  @Override
+  public @NotNull PageToken.PageTokenBuilder<?> pageTokenBuilder() {
+    return new EntityIdPageToken.EntityIdPageTokenBuilder();
   }
 }

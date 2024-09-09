@@ -62,8 +62,8 @@ import org.apache.polaris.core.admin.model.AwsStorageConfigInfo;
 import org.apache.polaris.core.admin.model.StorageConfigInfo;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
-import org.apache.polaris.core.catalog.PageToken;
-import org.apache.polaris.core.catalog.PolarisPage;
+import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.PolarisPage;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.CatalogEntity;
@@ -1124,7 +1124,10 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
         .rejects(TABLE);
     List<PolarisBaseEntity> tasks =
         metaStoreManager
-            .loadTasks(polarisContext, "testExecutor", PageToken.fromLimit(1))
+            .loadTasks(
+                polarisContext,
+                "testExecutor",
+                polarisContext.getMetaStore().pageTokenBuilder().fromLimit(1))
             .getEntities();
     Assertions.assertThat(tasks).hasSize(1);
     TaskEntity taskEntity = TaskEntity.of(tasks.get(0));
@@ -1239,7 +1242,10 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
     handler.handleTask(
         TaskEntity.of(
             metaStoreManager
-                .loadTasks(polarisContext, "testExecutor", PageToken.fromLimit(1))
+                .loadTasks(
+                    polarisContext,
+                    "testExecutor",
+                    polarisContext.getMetaStore().pageTokenBuilder().fromLimit(1))
                 .getEntities()
                 .getFirst()));
     Assertions.assertThat(measured.getNumDeletedFiles()).as("A table was deleted").isGreaterThan(0);
@@ -1260,7 +1266,9 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
       Assertions.assertThat(catalog.listTables(NS)).isNotNull().hasSize(5);
 
       // List with a limit:
-      PolarisPage<?> firstListResult = catalog.listTables(NS, PageToken.fromLimit(2));
+      PolarisPage<?> firstListResult = catalog.listTables(
+          NS,
+          polarisContext.getMetaStore().pageTokenBuilder().fromLimit(2));
       Assertions.assertThat(firstListResult.data.size()).isEqualTo(2);
       Assertions.assertThat(firstListResult.pageToken.toString()).isNotNull().isNotEmpty();
 
@@ -1295,7 +1303,9 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
       Assertions.assertThat(catalog.listViews(NS)).isNotNull().hasSize(5);
 
       // List with a limit:
-      PolarisPage<?> firstListResult = catalog.listViews(NS, PageToken.fromLimit(2));
+      PolarisPage<?> firstListResult = catalog.listViews(
+          NS,
+          polarisContext.getMetaStore().pageTokenBuilder().fromLimit(2));
       Assertions.assertThat(firstListResult.data.size()).isEqualTo(2);
       Assertions.assertThat(firstListResult.pageToken.toString()).isNotNull().isNotEmpty();
 
@@ -1326,7 +1336,8 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
       Assertions.assertThat(catalog.listNamespaces()).isNotNull().hasSize(5);
 
       // List with a limit:
-      PolarisPage<?> firstListResult = catalog.listNamespaces(PageToken.fromLimit(2));
+      PolarisPage<?> firstListResult = catalog.listNamespaces(
+          polarisContext.getMetaStore().pageTokenBuilder().fromLimit(2));
       Assertions.assertThat(firstListResult.data.size()).isEqualTo(2);
       Assertions.assertThat(firstListResult.pageToken.toString()).isNotNull().isNotEmpty();
 
@@ -1341,7 +1352,8 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
       Assertions.assertThat(finalListResult.pageToken).isNull();
 
       // List with page size matching the amount of data
-      PolarisPage<?> firstExactListResult = catalog.listNamespaces(PageToken.fromLimit(5));
+      PolarisPage<?> firstExactListResult = catalog.listNamespaces(
+          polarisContext.getMetaStore().pageTokenBuilder().fromLimit(5));
       Assertions.assertThat(firstExactListResult.data.size()).isEqualTo(5);
       Assertions.assertThat(firstExactListResult.pageToken.toString()).isNotNull().isNotEmpty();
 
@@ -1351,7 +1363,8 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
       Assertions.assertThat(secondExactListResult.pageToken).isNull();
 
       // List with huge page size:
-      PolarisPage<?> bigListResult = catalog.listNamespaces(PageToken.fromLimit(9999));
+      PolarisPage<?> bigListResult = catalog.listNamespaces(
+          polarisContext.getMetaStore().pageTokenBuilder().fromLimit(9999));
       Assertions.assertThat(bigListResult.data.size()).isEqualTo(5);
       Assertions.assertThat(bigListResult.pageToken).isNull();
     } finally {

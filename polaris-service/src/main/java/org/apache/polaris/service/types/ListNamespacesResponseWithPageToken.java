@@ -24,8 +24,8 @@ import com.google.common.base.Preconditions;
 import java.util.List;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.rest.responses.ListNamespacesResponse;
-import org.apache.polaris.core.catalog.PageToken;
-import org.apache.polaris.core.catalog.PolarisPage;
+import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.PolarisPage;
 
 /**
  * Used in lieu of `ListNamespacesResponse` when there may be a `PageToken` associated with the

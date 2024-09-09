@@ -23,8 +23,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.apache.polaris.core.PolarisCallContext;
-import org.apache.polaris.core.catalog.PageToken;
-import org.apache.polaris.core.catalog.PolarisPage;
+import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.PolarisPage;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
 import org.apache.polaris.core.entity.PolarisEntitiesActiveKey;
@@ -528,4 +528,13 @@ public interface PolarisMetaStoreSession {
 
   /** Rollback the current transaction */
   void rollback();
+
+  /**
+   * This method is used to construct page tokens when the metastore may need them. Different metastore
+   * implementations may bring their own PageToken implementations or share them.
+   * @return A `PageToken.PageTokenBuilder` implementation compatible with this
+   * `PolarisMetaStoreSession` implementation
+   */
+  @NotNull
+  PageToken.PageTokenBuilder<?> pageTokenBuilder();
 }

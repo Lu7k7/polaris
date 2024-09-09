@@ -49,7 +49,7 @@ import org.apache.iceberg.rest.requests.UpdateTableRequest;
 import org.apache.iceberg.rest.responses.ConfigResponse;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
-import org.apache.polaris.core.catalog.PageToken;
+import org.apache.polaris.core.catalog.pagination.PageToken;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.PolarisEntity;
@@ -127,7 +127,11 @@ public class IcebergCatalogAdapter
     Optional<Namespace> namespaceOptional =
         Optional.ofNullable(parent).map(IcebergCatalogAdapter::decodeNamespace);
 
-    PageToken token = PageToken.fromString(pageToken).withPageSize(pageSize);
+    PolarisEntityManager entityManager =
+        entityManagerFactory.getOrCreateEntityManager(
+            CallContext.getCurrentContext().getRealmContext());
+    PageToken token = entityManager.newMetaStoreSession()
+        .pageTokenBuilder().fromString(pageToken).withPageSize(pageSize);
     var response =
         newHandlerWrapper(securityContext, prefix)
             .listNamespaces(namespaceOptional.orElse(Namespace.of()), token);
@@ -216,7 +220,11 @@ public class IcebergCatalogAdapter
       SecurityContext securityContext) {
     Namespace ns = decodeNamespace(namespace);
 
-    PageToken token = PageToken.fromString(pageToken).withPageSize(pageSize);
+    PolarisEntityManager entityManager =
+        entityManagerFactory.getOrCreateEntityManager(
+            CallContext.getCurrentContext().getRealmContext());
+    PageToken token = entityManager.newMetaStoreSession()
+        .pageTokenBuilder().fromString(pageToken).withPageSize(pageSize);
     return Response.ok(newHandlerWrapper(securityContext, prefix).listTables(ns, token)).build();
   }
 
@@ -352,7 +360,11 @@ public class IcebergCatalogAdapter
       Integer pageSize,
       SecurityContext securityContext) {
     Namespace ns = decodeNamespace(namespace);
-    PageToken token = PageToken.fromString(pageToken).withPageSize(pageSize);
+    PolarisEntityManager entityManager =
+        entityManagerFactory.getOrCreateEntityManager(
+            CallContext.getCurrentContext().getRealmContext());
+    PageToken token = entityManager.newMetaStoreSession()
+        .pageTokenBuilder().fromString(pageToken).withPageSize(pageSize);
     return Response.ok(newHandlerWrapper(securityContext, prefix).listViews(ns, token)).build();
   }
 

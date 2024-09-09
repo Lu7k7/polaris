@@ -78,9 +78,9 @@ import org.apache.iceberg.view.ViewUtil;
 import org.apache.polaris.core.PolarisCallContext;
 import org.apache.polaris.core.PolarisConfiguration;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
-import org.apache.polaris.core.catalog.PageToken;
+import org.apache.polaris.core.catalog.pagination.PageToken;
 import org.apache.polaris.core.catalog.PolarisCatalogHelpers;
-import org.apache.polaris.core.catalog.PolarisPage;
+import org.apache.polaris.core.catalog.pagination.PolarisPage;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.entity.CatalogEntity;
 import org.apache.polaris.core.entity.NamespaceEntity;
@@ -176,6 +176,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
   private Map<String, String> catalogProperties;
   private Map<String, String> tableDefaultProperties;
   private final FileIOFactory fileIOFactory;
+  private final PageToken.PageTokenBuilder<?> pageTokenBuilder;
 
   /**
    * @param entityManager provides handle to underlying PolarisMetaStoreManager with which to
@@ -202,6 +203,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
     this.catalogId = catalogEntity.getId();
     this.catalogName = catalogEntity.getName();
     this.fileIOFactory = fileIOFactory;
+    this.pageTokenBuilder = entityManager.newMetaStoreSession().pageTokenBuilder();
   }
 
   @Override
@@ -459,7 +461,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
 
   @Override
   public List<TableIdentifier> listTables(Namespace namespace) {
-    return listTables(namespace, PageToken.readEverything()).data;
+    return listTables(namespace, pageTokenBuilder.readEverything()).data;
   }
 
   public PolarisPage<TableIdentifier> listTables(Namespace namespace, PageToken pageToken) {
@@ -760,7 +762,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
 
   @Override
   public List<Namespace> listNamespaces(Namespace namespace) throws NoSuchNamespaceException {
-    return listNamespaces(namespace, PageToken.readEverything()).data;
+    return listNamespaces(namespace, pageTokenBuilder.readEverything()).data;
   }
 
   public PolarisPage<Namespace> listNamespaces(PageToken pageToken)
@@ -803,7 +805,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
 
   @Override
   public List<TableIdentifier> listViews(Namespace namespace) {
-    return listViews(namespace, PageToken.readEverything()).data;
+    return listViews(namespace, pageTokenBuilder.readEverything()).data;
   }
 
   public PolarisPage<TableIdentifier> listViews(Namespace namespace, PageToken pageToken) {
@@ -1090,7 +1092,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
                 parentPath.stream().map(PolarisEntity::toCore).collect(Collectors.toList()),
                 PolarisEntityType.NAMESPACE,
                 PolarisEntitySubType.ANY_SUBTYPE,
-                PageToken.readEverything());
+                pageTokenBuilder.readEverything());
     if (!siblingNamespacesResult.isSuccess()) {
       throw new IllegalStateException(
           "Unable to resolve siblings entities to validate location - could not list namespaces");
@@ -1117,7 +1119,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
                                   .collect(Collectors.toList()),
                               PolarisEntityType.TABLE_LIKE,
                               PolarisEntitySubType.ANY_SUBTYPE,
-                              PageToken.readEverything());
+                              pageTokenBuilder.readEverything());
                   if (!siblingTablesResult.isSuccess()) {
                     throw new IllegalStateException(
                         "Unable to resolve siblings entities to validate location - could not list tables");

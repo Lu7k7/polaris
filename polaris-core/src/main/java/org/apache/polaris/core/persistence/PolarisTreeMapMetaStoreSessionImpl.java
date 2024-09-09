@@ -25,8 +25,9 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.polaris.core.PolarisCallContext;
-import org.apache.polaris.core.catalog.PageToken;
-import org.apache.polaris.core.catalog.PolarisPage;
+import org.apache.polaris.core.catalog.pagination.OffsetPageToken;
+import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.PolarisPage;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
 import org.apache.polaris.core.entity.PolarisEntitiesActiveKey;
@@ -363,9 +364,13 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
       long catalogId,
       long parentId,
       @NotNull PolarisEntityType entityType,
-      PageToken pageToken,
+      @NotNull PageToken pageToken,
       @NotNull Predicate<PolarisBaseEntity> entityFilter,
       @NotNull Function<PolarisBaseEntity, T> transformer) {
+    if (!(pageToken instanceof OffsetPageToken)) {
+      throw new IllegalArgumentException("Unexpected pageToken:" + pageToken);
+    }
+
     // full range scan under the parent for that type
     List<T> entities =
         this.store
@@ -374,12 +379,11 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
                 this.store.buildPrefixKeyComposite(catalogId, parentId, entityType.getCode()))
             .stream()
             .filter(entityFilter)
-            .skip(pageToken.offset)
+            .skip(((OffsetPageToken) pageToken).offset)
             .limit(pageToken.pageSize)
             .map(transformer)
             .collect(Collectors.toList());
-    return new PolarisPage<T>(
-        new PageToken(pageToken.offset + entities.size(), pageToken.pageSize), entities);
+    return pageToken.buildNextPage(entities);
   }
 
   /** {@inheritDoc} */
@@ -579,5 +583,10 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
   @Override
   public void rollback() {
     this.store.rollback();
+  }
+
+  @Override
+  public @NotNull PageToken.PageTokenBuilder<?> pageTokenBuilder() {
+    return new OffsetPageToken.OffsetPageTokenBuilder();
   }
 }

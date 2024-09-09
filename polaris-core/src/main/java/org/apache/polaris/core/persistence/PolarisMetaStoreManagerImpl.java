@@ -35,8 +35,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.polaris.core.PolarisCallContext;
-import org.apache.polaris.core.catalog.PageToken;
-import org.apache.polaris.core.catalog.PolarisPage;
+import org.apache.polaris.core.catalog.pagination.OffsetPageToken;
+import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.PolarisPage;
 import org.apache.polaris.core.entity.AsyncTaskType;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
@@ -1490,7 +1491,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
                   catalogId,
                   catalogId,
                   PolarisEntityType.CATALOG_ROLE,
-                  PageToken.fromLimit(2),
+                  ms.pageTokenBuilder().fromLimit(2),
                   entity -> true,
                   Function.identity())
               .data;
@@ -2018,7 +2019,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
         callCtx, () -> this.loadEntity(callCtx, ms, entityCatalogId, entityId));
   }
 
-  /** Refer to {@link #loadTasks(PolarisCallContext, String, int)} */
+  /** Refer to {@link #loadTasks(PolarisCallContext, String, int, PageToken)} */
   private @NotNull EntitiesResult loadTasks(
       @NotNull PolarisCallContext callCtx,
       @NotNull PolarisMetaStoreSession ms,
