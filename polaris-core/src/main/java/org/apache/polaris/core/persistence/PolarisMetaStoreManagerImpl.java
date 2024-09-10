@@ -2025,6 +2025,14 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
       String executorId,
       PageToken pageToken) {
 
+    long taskAgeTimeout =
+        callCtx
+            .getConfigurationStore()
+            .getConfiguration(
+                callCtx,
+                PolarisTaskConstants.TASK_TIMEOUT_MILLIS_CONFIG,
+                PolarisTaskConstants.TASK_TIMEOUT_MILLIS);
+
     // find all available tasks
     PolarisPage<PolarisBaseEntity> availableTasks =
         ms.listActiveEntities(
@@ -2036,13 +2044,6 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
             entity -> {
               PolarisObjectMapperUtil.TaskExecutionState taskState =
                   PolarisObjectMapperUtil.parseTaskState(entity);
-              long taskAgeTimeout =
-                  callCtx
-                      .getConfigurationStore()
-                      .getConfiguration(
-                          callCtx,
-                          PolarisTaskConstants.TASK_TIMEOUT_MILLIS_CONFIG,
-                          PolarisTaskConstants.TASK_TIMEOUT_MILLIS);
               return taskState == null
                   || taskState.executor == null
                   || callCtx.getClock().millis() - taskState.lastAttemptStartTime > taskAgeTimeout;
