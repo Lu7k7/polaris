@@ -65,7 +65,7 @@ public class ReadEverythingPageToken extends PageToken {
     }
 
     @Override
-    public ReadEverythingPageToken fromLimit(int limit) {
+    protected ReadEverythingPageToken fromLimitImpl(int limit) {
       throw new UnsupportedOperationException();
     }
   }
@@ -82,6 +82,10 @@ public class ReadEverythingPageToken extends PageToken {
 
   @Override
   public PageToken withPageSize(Integer pageSize) {
-    throw new UnsupportedOperationException();
+    if (pageSize == null) {
+      return ReadEverythingPageToken.get();
+    } else {
+      throw new UnsupportedOperationException();
+    }
   }
 }

@@ -107,6 +107,19 @@ public class IcebergCatalogAdapter
         polarisAuthorizer);
   }
 
+  private PageToken buildPageToken(
+      PolarisEntityManager entityManager, String tokenString, Integer pageSize) {
+    if (tokenString != null) {
+      return entityManager
+          .newMetaStoreSession()
+          .pageTokenBuilder()
+          .fromString(tokenString)
+          .withPageSize(pageSize);
+    } else {
+      return entityManager.newMetaStoreSession().pageTokenBuilder().fromLimit(pageSize);
+    }
+  }
+
   @Override
   public Response createNamespace(
       String prefix,
@@ -130,12 +143,8 @@ public class IcebergCatalogAdapter
     PolarisEntityManager entityManager =
         entityManagerFactory.getOrCreateEntityManager(
             CallContext.getCurrentContext().getRealmContext());
-    PageToken token =
-        entityManager
-            .newMetaStoreSession()
-            .pageTokenBuilder()
-            .fromString(pageToken)
-            .withPageSize(pageSize);
+    PageToken token = buildPageToken(entityManager, pageToken, pageSize);
+
     var response =
         newHandlerWrapper(securityContext, prefix)
             .listNamespaces(namespaceOptional.orElse(Namespace.of()), token);
@@ -227,12 +236,7 @@ public class IcebergCatalogAdapter
     PolarisEntityManager entityManager =
         entityManagerFactory.getOrCreateEntityManager(
             CallContext.getCurrentContext().getRealmContext());
-    PageToken token =
-        entityManager
-            .newMetaStoreSession()
-            .pageTokenBuilder()
-            .fromString(pageToken)
-            .withPageSize(pageSize);
+    PageToken token = buildPageToken(entityManager, pageToken, pageSize);
     return Response.ok(newHandlerWrapper(securityContext, prefix).listTables(ns, token)).build();
   }
 
@@ -371,12 +375,7 @@ public class IcebergCatalogAdapter
     PolarisEntityManager entityManager =
         entityManagerFactory.getOrCreateEntityManager(
             CallContext.getCurrentContext().getRealmContext());
-    PageToken token =
-        entityManager
-            .newMetaStoreSession()
-            .pageTokenBuilder()
-            .fromString(pageToken)
-            .withPageSize(pageSize);
+    PageToken token = buildPageToken(entityManager, pageToken, pageSize);
     return Response.ok(newHandlerWrapper(securityContext, prefix).listViews(ns, token)).build();
   }
 

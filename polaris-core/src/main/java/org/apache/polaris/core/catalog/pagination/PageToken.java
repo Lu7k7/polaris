@@ -72,7 +72,7 @@ public abstract class PageToken {
     /** Deserialize a string into a `PageToken` */
     public final PageToken fromString(String tokenString) {
       if (tokenString == null) {
-        return ReadEverythingPageToken.get();
+        throw new IllegalArgumentException("Cannot build page token from null string");
       } else if (tokenString.isEmpty()) {
         if (this instanceof ReadEverythingPageToken.ReadEverythingPageTokenBuilder) {
           return ReadEverythingPageToken.get();
@@ -99,15 +99,24 @@ public abstract class PageToken {
       }
     }
 
+    /** Construct a `PageToken` from a plain limit */
+    public final PageToken fromLimit(Integer limit) {
+      if (limit == null) {
+        return ReadEverythingPageToken.get();
+      } else {
+        return fromLimitImpl(limit);
+      }
+    }
+
+    /** Construct a `PageToken` from a plain limit */
+    protected abstract T fromLimitImpl(int limit);
+
     /**
      * PageTokenBuilder implementations should implement this to build a PageToken from components
      * in a string token. These components should be the same ones returned by `getComponents` and
      * won't include the token prefix or the checksum.
      */
     protected abstract T fromStringComponents(List<String> components);
-
-    /** Construct a `PageToken` from a plain limit */
-    public abstract T fromLimit(int limit);
   }
 
   /** Convert this PageToken to components that the serialized token string will be built from. */

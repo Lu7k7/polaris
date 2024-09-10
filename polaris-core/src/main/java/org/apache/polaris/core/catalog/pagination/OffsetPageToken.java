@@ -83,7 +83,7 @@ public class OffsetPageToken extends PageToken {
     }
 
     @Override
-    public OffsetPageToken fromLimit(int limit) {
+    protected OffsetPageToken fromLimitImpl(int limit) {
       return new OffsetPageToken(BASE_OFFSET, limit);
     }
   }

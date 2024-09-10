@@ -70,7 +70,7 @@ public class EntityIdPageToken extends PageToken {
     }
 
     @Override
-    public EntityIdPageToken fromLimit(int limit) {
+    protected EntityIdPageToken fromLimitImpl(int limit) {
       return new EntityIdPageToken(BASE_ID, limit);
     }
   }

@@ -35,7 +35,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.polaris.core.PolarisCallContext;
-import org.apache.polaris.core.catalog.pagination.EntityIdPageToken;
 import org.apache.polaris.core.catalog.pagination.ReadEverythingPageToken;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.entity.AsyncTaskType;
@@ -408,7 +407,9 @@ public abstract class BasePolarisMetaStoreManagerTest {
                       taskList =
                           metaStoreManager
                               .loadTasks(
-                                  callCtx, executorId, callCtx.getMetaStore().pageTokenBuilder().fromLimit(5))
+                                  callCtx,
+                                  executorId,
+                                  callCtx.getMetaStore().pageTokenBuilder().fromLimit(5))
                               .getEntities();
                       taskList.stream().map(PolarisBaseEntity::getName).forEach(taskNames::add);
                     } catch (RetryOnConcurrencyException e) {

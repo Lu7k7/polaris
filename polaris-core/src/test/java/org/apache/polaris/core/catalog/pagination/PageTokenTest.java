@@ -69,18 +69,20 @@ public class PageTokenTest {
       Assertions.assertThatThrownBy(() -> builder.fromLimit(limit))
           .isInstanceOf(IllegalArgumentException.class);
     }
+
+    Assertions.assertThat(builder.fromLimit(null)).isInstanceOf(ReadEverythingPageToken.class);
   }
 
   @ParameterizedTest
   @MethodSource("getPageTokenBuilders")
   void testStartingTokens(PageToken.PageTokenBuilder<?> builder) {
-    Assertions.assertThat(builder.fromString(null)).isNotNull();
-    Assertions.assertThat(builder.fromString(null)).isEqualTo(ReadEverythingPageToken.get());
-
     Assertions.assertThat(builder.fromString("")).isNotNull();
     if (!(builder instanceof ReadEverythingPageToken.ReadEverythingPageTokenBuilder)) {
       Assertions.assertThat(builder.fromString("")).isNotEqualTo(ReadEverythingPageToken.get());
     }
+
+    Assertions.assertThatThrownBy(() -> builder.fromString(null))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @ParameterizedTest
@@ -156,7 +158,7 @@ public class PageTokenTest {
 
   @Test
   void testOffsetPageToken() {
-    OffsetPageToken token = OffsetPageToken.builder().fromLimit(2);
+    OffsetPageToken token = (OffsetPageToken) OffsetPageToken.builder().fromLimit(2);
 
     Assertions.assertThat(token).isInstanceOf(OffsetPageToken.class);
     Assertions.assertThat(token.offset).isEqualTo(0);
@@ -175,7 +177,7 @@ public class PageTokenTest {
 
   @Test
   void testEntityIdPageToken() {
-    EntityIdPageToken token = EntityIdPageToken.builder().fromLimit(2);
+    EntityIdPageToken token = (EntityIdPageToken) EntityIdPageToken.builder().fromLimit(2);
 
     Assertions.assertThat(token).isInstanceOf(EntityIdPageToken.class);
     Assertions.assertThat(token.id).isEqualTo(-1L);
