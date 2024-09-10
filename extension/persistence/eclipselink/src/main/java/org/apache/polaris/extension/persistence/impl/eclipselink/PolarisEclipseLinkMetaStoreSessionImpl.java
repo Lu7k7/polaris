@@ -40,7 +40,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -554,36 +553,37 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
     List<T> data;
     if (entityFilter.equals(Predicates.alwaysTrue())) {
       // In this case, we can push the filter down into the query
-      data = this.store
-          .lookupFullEntitiesActive(
-              localSession.get(), catalogId, parentId, entityType, pageToken)
-          .stream()
-          .map(ModelEntity::toEntity)
-          .filter(entityFilter)
-          .map(transformer)
-          .collect(Collectors.toList());
+      data =
+          this.store
+              .lookupFullEntitiesActive(
+                  localSession.get(), catalogId, parentId, entityType, pageToken)
+              .stream()
+              .map(ModelEntity::toEntity)
+              .filter(entityFilter)
+              .map(transformer)
+              .collect(Collectors.toList());
     } else {
       // In this case, we cannot push the filter down into the query. We must therefore remove
       // the page size limit from the PageToken and filter on the client side.
       PageToken unlimitedPageSizeToken = pageToken.withPageSize(Integer.MAX_VALUE);
-      List<ModelEntity> rawData = this.store
-          .lookupFullEntitiesActive(
+      List<ModelEntity> rawData =
+          this.store.lookupFullEntitiesActive(
               localSession.get(), catalogId, parentId, entityType, unlimitedPageSizeToken);
       if (pageToken.pageSize < Integer.MAX_VALUE && rawData.size() > pageToken.pageSize) {
         LOGGER.info(
-            "A page token could not be respected due to a predicate. " +
-                "{} records were read but the client was asked to return {}.",
+            "A page token could not be respected due to a predicate. "
+                + "{} records were read but the client was asked to return {}.",
             rawData.size(),
             pageToken.pageSize);
       }
 
-        data = rawData
-          .stream()
-          .map(ModelEntity::toEntity)
-          .filter(entityFilter)
-          .limit(pageToken.pageSize)
-          .map(transformer)
-          .collect(Collectors.toList());
+      data =
+          rawData.stream()
+              .map(ModelEntity::toEntity)
+              .filter(entityFilter)
+              .limit(pageToken.pageSize)
+              .map(transformer)
+              .collect(Collectors.toList());
     }
 
     return pageToken.buildNextPage(data);
