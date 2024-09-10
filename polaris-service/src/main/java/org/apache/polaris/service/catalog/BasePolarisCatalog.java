@@ -448,7 +448,9 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
         .getPolarisCallContext()
         .getConfigurationStore()
         .getConfiguration(
-            callContext.getPolarisCallContext(), PolarisConfiguration.LIST_PAGINATION_ENABLED);
+            callContext.getPolarisCallContext(),
+            catalogEntity,
+            PolarisConfiguration.LIST_PAGINATION_ENABLED);
   }
 
   @Override
@@ -462,7 +464,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
           "Cannot list tables for namespace. Namespace does not exist: %s", namespace);
     }
     if (!paginationEnabled()) {
-      return PolarisPage.fromData(listViews(namespace));
+      pageToken = ReadEverythingPageToken.get();
     }
 
     return listTableLike(PolarisEntitySubType.TABLE, namespace, pageToken);
@@ -770,7 +772,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
       throw new NoSuchNamespaceException("Namespace does not exist: %s", namespace);
     }
     if (!paginationEnabled()) {
-      return PolarisPage.fromData(listNamespaces(namespace));
+      pageToken = ReadEverythingPageToken.get();
     }
 
     List<PolarisEntity> catalogPath = resolvedEntities.getRawFullPath();
@@ -807,7 +809,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
           "Cannot list views for namespace. Namespace does not exist: %s", namespace);
     }
     if (!paginationEnabled()) {
-      return PolarisPage.fromData(listViews(namespace));
+      pageToken = ReadEverythingPageToken.get();
     }
 
     return listTableLike(PolarisEntitySubType.VIEW, namespace, pageToken);

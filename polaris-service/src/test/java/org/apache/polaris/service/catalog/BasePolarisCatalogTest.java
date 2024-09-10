@@ -198,6 +198,8 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
                     PolarisConfiguration.ALLOW_EXTERNAL_TABLE_LOCATION.catalogConfig(), "true")
                 .addProperty(
                     PolarisConfiguration.ALLOW_UNSTRUCTURED_TABLE_LOCATION.catalogConfig(), "true")
+                .addProperty(
+                    PolarisConfiguration.LIST_PAGINATION_ENABLED.catalogConfig(), "true")
                 .setStorageConfigurationInfo(storageConfigModel, storageLocation)
                 .build());
 
