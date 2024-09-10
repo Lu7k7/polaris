@@ -572,7 +572,7 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
       if (pageToken.pageSize < Integer.MAX_VALUE && rawData.size() > pageToken.pageSize) {
         LOGGER.info(
             "A page token could not be respected due to a predicate. " +
-                "{} records were read but the client was asked to return {}",
+                "{} records were read but the client was asked to return {}.",
             rawData.size(),
             pageToken.pageSize);
       }
