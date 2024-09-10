@@ -98,7 +98,6 @@ import org.slf4j.LoggerFactory;
  */
 public class PolarisAdminService {
   private static final Logger LOGGER = LoggerFactory.getLogger(PolarisAdminService.class);
-  public static final String CLEANUP_ON_CATALOG_DROP = "CLEANUP_ON_CATALOG_DROP";
 
   private final CallContext callContext;
   private final PolarisEntityManager entityManager;
@@ -579,7 +578,7 @@ public class PolarisAdminService {
     boolean cleanup =
         polarisCallContext
             .getConfigurationStore()
-            .getConfiguration(polarisCallContext, CLEANUP_ON_CATALOG_DROP, false);
+            .getConfiguration(polarisCallContext, PolarisConfiguration.CLEANUP_ON_CATALOG_DROP);
     PolarisMetaStoreManager.DropEntityResult dropEntityResult =
         entityManager
             .getMetaStoreManager()
