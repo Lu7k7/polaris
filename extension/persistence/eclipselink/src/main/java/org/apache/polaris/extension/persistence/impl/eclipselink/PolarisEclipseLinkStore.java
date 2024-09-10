@@ -23,10 +23,10 @@ import jakarta.persistence.TypedQuery;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.polaris.core.PolarisDiagnostics;
 import org.apache.polaris.core.catalog.pagination.EntityIdPageToken;
 import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.ReadEverythingPageToken;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisEntitiesActiveKey;
 import org.apache.polaris.core.entity.PolarisEntityActiveRecord;
@@ -276,18 +276,25 @@ public class PolarisEclipseLinkStore {
     return query.getSingleResult();
   }
 
-  Stream<ModelEntity> lookupFullEntitiesActive(
+  List<ModelEntity> lookupFullEntitiesActive(
       EntityManager session,
       long catalogId,
       long parentId,
       @NotNull PolarisEntityType entityType,
       @NotNull PageToken pageToken) {
     diagnosticServices.check(session != null, "session_is_null");
-    diagnosticServices.check(pageToken instanceof EntityIdPageToken, "unexpected_page_token");
+    diagnosticServices.check(
+        (pageToken instanceof EntityIdPageToken || pageToken instanceof ReadEverythingPageToken),
+        "unexpected_page_token");
 
     // Currently check against ENTITIES not joining with ENTITIES_ACTIVE
     String hql =
-        "SELECT m from ModelEntity m where m.catalogId=:catalogId and m.parentId=:parentId and m.typeCode=:typeCode and m.id > :tokenId";
+        "SELECT m from ModelEntity m "
+            + " where m.catalogId=:catalogId and m.parentId=:parentId and m.typeCode=:typeCode and m.id > :tokenId";
+
+    if (pageToken instanceof EntityIdPageToken) {
+      hql += " ORDER BY m.id ASC";
+    }
 
     TypedQuery<ModelEntity> query =
         session
@@ -295,10 +302,16 @@ public class PolarisEclipseLinkStore {
             .setParameter("catalogId", catalogId)
             .setParameter("parentId", parentId)
             .setParameter("typeCode", entityType.getCode())
-            .setParameter("tokenId", ((EntityIdPageToken) pageToken).id)
-            .setMaxResults(pageToken.pageSize);
+            .setParameter("tokenId", -1L);
 
-    return query.getResultStream();
+    if (pageToken instanceof EntityIdPageToken) {
+      query =
+          query
+              .setParameter("tokenId", ((EntityIdPageToken) pageToken).id)
+              .setMaxResults(pageToken.pageSize);
+    }
+
+    return query.getResultList();
   }
 
   ModelEntityDropped lookupEntityDropped(EntityManager session, long catalogId, long entityId) {

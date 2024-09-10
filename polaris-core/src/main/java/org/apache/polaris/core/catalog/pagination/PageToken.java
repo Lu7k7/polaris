@@ -19,11 +19,11 @@
 package org.apache.polaris.core.catalog.pagination;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Represents a page token that can be used by operations like `listTables`. Clients that specify a
@@ -38,12 +38,21 @@ public abstract class PageToken {
 
   public int pageSize;
 
-  private static final int DEFAULT_PAGE_SIZE = 1000;
-
   public static final PageToken DONE = null;
+  public static final int DEFAULT_PAGE_SIZE = 1000;
 
-  /** Get a `PageTokenBuilder` implementation for this `PageToken` implementation */
-  public abstract PageTokenBuilder<?> builder();
+  protected void validate() {
+    if (pageSize <= 0) {
+      throw new IllegalArgumentException("Page size must be greater than zero");
+    }
+  }
+
+  /**
+   * Get a new PageTokenBuilder from a PageToken. The PageTokenBuilder type should match the
+   * PageToken type. Implementations may also provide a static `builder` method to obtain the same
+   * PageTokenBuilder.
+   */
+  protected abstract PageTokenBuilder<?> getBuilder();
 
   /** Allows `PageToken` implementations to implement methods like `fromLimit` */
   public abstract static class PageTokenBuilder<T extends PageToken> {
@@ -55,21 +64,21 @@ public abstract class PageToken {
     public abstract String tokenPrefix();
 
     /**
-     * The number of expected components in a token. This should match the number of
-     * components returned by getComponents and shouldn't account for the prefix
-     * or the checksum.
+     * The number of expected components in a token. This should match the number of components
+     * returned by getComponents and shouldn't account for the prefix or the checksum.
      */
     public abstract int expectedComponents();
 
-    /** Construct a `PageToken` to read everything */
-    public abstract T readEverything();
-
     /** Deserialize a string into a `PageToken` */
-    public final T fromString(String tokenString) {
+    public final PageToken fromString(String tokenString) {
       if (tokenString == null) {
-        return readEverything();
+        return ReadEverythingPageToken.get();
       } else if (tokenString.isEmpty()) {
-        return fromLimit(DEFAULT_PAGE_SIZE);
+        if (this instanceof ReadEverythingPageToken.ReadEverythingPageTokenBuilder) {
+          return ReadEverythingPageToken.get();
+        } else {
+          return fromLimit(DEFAULT_PAGE_SIZE);
+        }
       } else {
         try {
           String decoded =
@@ -77,11 +86,13 @@ public abstract class PageToken {
           String[] parts = decoded.split(":");
 
           // +2 to account for the prefix and checksum.
-          if (parts.length != expectedComponents() + 2|| !parts[0].equals(tokenPrefix())) {
+          if (parts.length != expectedComponents() + 2 || !parts[0].equals(tokenPrefix())) {
             throw new IllegalArgumentException("Invalid token format in token: " + tokenString);
           }
 
-          return fromStringComponents(Arrays.asList(parts));
+          T result = fromStringComponents(Arrays.asList(parts).subList(1, parts.length - 1));
+          result.validate();
+          return result;
         } catch (Exception e) {
           throw new IllegalArgumentException("Failed to decode page token: " + tokenString, e);
         }
@@ -99,16 +110,14 @@ public abstract class PageToken {
     public abstract T fromLimit(int limit);
   }
 
-  /**
-   * Convert this PageToken to components that the serialized token string will be built from.
-   */
+  /** Convert this PageToken to components that the serialized token string will be built from. */
   protected abstract List<String> getComponents();
 
   /**
    * Builds a new page token to reflect new data that's been read. If the amount of data read is
    * less than the pageSize, this will return `PageToken.DONE` (done)
    */
-  public abstract PageToken updated(List<?> newData);
+  protected abstract PageToken updated(List<?> newData);
 
   /**
    * Builds a `PolarisPage<T>` from a `List<T>`. The `PageToken` attached to the new
@@ -128,20 +137,32 @@ public abstract class PageToken {
   @Override
   public final String toString() {
     List<String> components = getComponents();
-    String prefix = builder().tokenPrefix();
+    String prefix = getBuilder().tokenPrefix();
     String componentString = String.join(":", components);
     String checksum = String.valueOf(componentString.hashCode());
-    String rawString = prefix + componentString + checksum;
+    List<String> allElements =
+        Stream.of(prefix, componentString, checksum)
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toList());
+    String rawString = String.join(":", allElements);
     return Base64.getEncoder().encodeToString(rawString.getBytes(StandardCharsets.UTF_8));
   }
 
   @Override
   public final boolean equals(Object o) {
-    return this.toString().equals(o.toString());
+    if (o instanceof PageToken) {
+      return this.toString().equals(o.toString());
+    } else {
+      return false;
+    }
   }
 
   @Override
   public final int hashCode() {
-    return toString().hashCode();
+    if (toString() == null) {
+      return 0;
+    } else {
+      return toString().hashCode();
+    }
   }
 }

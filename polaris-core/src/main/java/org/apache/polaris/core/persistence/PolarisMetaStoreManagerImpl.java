@@ -35,7 +35,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.polaris.core.PolarisCallContext;
-import org.apache.polaris.core.catalog.pagination.OffsetPageToken;
 import org.apache.polaris.core.catalog.pagination.PageToken;
 import org.apache.polaris.core.catalog.pagination.PolarisPage;
 import org.apache.polaris.core.entity.AsyncTaskType;

@@ -553,6 +553,7 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
         this.store
             .lookupFullEntitiesActive(
                 localSession.get(), catalogId, parentId, entityType, pageToken)
+            .stream()
             .map(ModelEntity::toEntity)
             .filter(entityFilter)
             .map(transformer)
@@ -770,6 +771,6 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
 
   @Override
   public @NotNull PageToken.PageTokenBuilder<?> pageTokenBuilder() {
-    return new EntityIdPageToken.EntityIdPageTokenBuilder();
+    return EntityIdPageToken.builder();
   }
 }

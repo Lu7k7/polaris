@@ -56,8 +56,8 @@ import org.apache.polaris.core.admin.model.ViewPrivilege;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizableOperation;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
-import org.apache.polaris.core.catalog.pagination.PageToken;
 import org.apache.polaris.core.catalog.PolarisCatalogHelpers;
+import org.apache.polaris.core.catalog.pagination.ReadEverythingPageToken;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.entity.CatalogEntity;
 import org.apache.polaris.core.entity.CatalogRoleEntity;
@@ -723,7 +723,7 @@ public class PolarisAdminService {
             null,
             PolarisEntityType.CATALOG,
             PolarisEntitySubType.ANY_SUBTYPE,
-            entityManager.newMetaStoreSession().pageTokenBuilder().readEverything())
+            ReadEverythingPageToken.get())
         .getEntities()
         .stream()
         .map(
@@ -902,7 +902,7 @@ public class PolarisAdminService {
             null,
             PolarisEntityType.PRINCIPAL,
             PolarisEntitySubType.NULL_SUBTYPE,
-            entityManager.newMetaStoreSession().pageTokenBuilder().readEverything())
+            ReadEverythingPageToken.get())
         .getEntities()
         .stream()
         .map(
@@ -1025,7 +1025,7 @@ public class PolarisAdminService {
             null,
             PolarisEntityType.PRINCIPAL_ROLE,
             PolarisEntitySubType.NULL_SUBTYPE,
-            entityManager.newMetaStoreSession().pageTokenBuilder().readEverything())
+            ReadEverythingPageToken.get())
         .getEntities()
         .stream()
         .map(
@@ -1167,7 +1167,7 @@ public class PolarisAdminService {
             PolarisEntity.toCoreList(List.of(catalogEntity)),
             PolarisEntityType.CATALOG_ROLE,
             PolarisEntitySubType.NULL_SUBTYPE,
-            entityManager.newMetaStoreSession().pageTokenBuilder().readEverything())
+            ReadEverythingPageToken.get())
         .getEntities()
         .stream()
         .map(

@@ -19,56 +19,86 @@
 package org.apache.polaris.core.catalog.pagination;
 
 import java.util.List;
+import org.apache.polaris.core.entity.PolarisBaseEntity;
+import org.apache.polaris.core.persistence.models.ModelEntity;
 
 // TODO implement and comment
 public class EntityIdPageToken extends PageToken {
-  public int id;
+  public long id;
 
-  @Override
-  public PageTokenBuilder<?> builder() {
-    return null;
+  private EntityIdPageToken(long id, int pageSize) {
+    this.id = id;
+    this.pageSize = pageSize;
+    validate();
   }
+
+  /** The entity ID to use to start with. */
+  private static final long BASE_ID = -1L;
 
   @Override
   protected List<String> getComponents() {
-    return List.of();
+    return List.of(String.valueOf(id), String.valueOf(pageSize));
+  }
+
+  /** Get a new `EntityIdPageTokenBuilder` instance */
+  public static PageTokenBuilder<EntityIdPageToken> builder() {
+    return new EntityIdPageToken.EntityIdPageTokenBuilder();
+  }
+
+  @Override
+  protected PageTokenBuilder<?> getBuilder() {
+    return EntityIdPageToken.builder();
   }
 
   public static class EntityIdPageTokenBuilder extends PageTokenBuilder<EntityIdPageToken> {
 
     @Override
     public String tokenPrefix() {
-      return "";
+      return "polaris-entity-id";
     }
 
     @Override
     public int expectedComponents() {
-      return 0;
-    }
-
-    @Override
-    public EntityIdPageToken readEverything() {
-      return null;
+      // id, pageSize
+      return 2;
     }
 
     @Override
     protected EntityIdPageToken fromStringComponents(List<String> components) {
-      return null;
+      return new EntityIdPageToken(
+          Integer.parseInt(components.get(0)), Integer.parseInt(components.get(1)));
     }
 
     @Override
     public EntityIdPageToken fromLimit(int limit) {
-      return null;
+      return new EntityIdPageToken(BASE_ID, limit);
     }
   }
 
   @Override
   public PageToken updated(List<?> newData) {
-    return null;
+    if (newData == null || newData.size() < this.pageSize) {
+      return PageToken.DONE;
+    } else {
+      if (newData.get(0) instanceof ModelEntity) {
+        return new EntityIdPageToken(
+            ((ModelEntity) newData.get(newData.size() - 1)).getId(), this.pageSize);
+      } else if (newData.get(0) instanceof PolarisBaseEntity) {
+        return new EntityIdPageToken(
+            ((PolarisBaseEntity) newData.get(newData.size() - 1)).getId(), this.pageSize);
+      } else {
+        throw new IllegalArgumentException(
+            "Cannot build a page token from: " + newData.get(0).getClass().getSimpleName());
+      }
+    }
   }
 
   @Override
   public PageToken withPageSize(Integer pageSize) {
-    return null;
+    if (pageSize == null) {
+      return new EntityIdPageToken(BASE_ID, this.pageSize);
+    } else {
+      return new EntityIdPageToken(this.id, pageSize);
+    }
   }
 }

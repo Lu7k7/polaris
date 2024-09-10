@@ -35,7 +35,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.polaris.core.PolarisCallContext;
-import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.EntityIdPageToken;
+import org.apache.polaris.core.catalog.pagination.ReadEverythingPageToken;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.entity.AsyncTaskType;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
@@ -130,7 +131,7 @@ public abstract class BasePolarisMetaStoreManagerTest {
                   null,
                   PolarisEntityType.TASK,
                   PolarisEntitySubType.NULL_SUBTYPE,
-                  PageToken.readEverything())
+                  ReadEverythingPageToken.get())
               .getEntities();
       Assertions.assertThat(listedEntities)
           .isNotNull()
@@ -292,7 +293,9 @@ public abstract class BasePolarisMetaStoreManagerTest {
     PolarisMetaStoreManager metaStoreManager = polarisTestMetaStoreManager.polarisMetaStoreManager;
     PolarisCallContext callCtx = polarisTestMetaStoreManager.polarisCallContext;
     List<PolarisBaseEntity> taskList =
-        metaStoreManager.loadTasks(callCtx, executorId, PageToken.fromLimit(5)).getEntities();
+        metaStoreManager
+            .loadTasks(callCtx, executorId, callCtx.getMetaStore().pageTokenBuilder().fromLimit(5))
+            .getEntities();
     Assertions.assertThat(taskList)
         .isNotNull()
         .isNotEmpty()
@@ -312,7 +315,9 @@ public abstract class BasePolarisMetaStoreManagerTest {
 
     // grab a second round of tasks. Assert that none of the original 5 are in the list
     List<PolarisBaseEntity> newTaskList =
-        metaStoreManager.loadTasks(callCtx, executorId, PageToken.fromLimit(5)).getEntities();
+        metaStoreManager
+            .loadTasks(callCtx, executorId, callCtx.getMetaStore().pageTokenBuilder().fromLimit(5))
+            .getEntities();
     Assertions.assertThat(newTaskList)
         .isNotNull()
         .isNotEmpty()
@@ -326,7 +331,9 @@ public abstract class BasePolarisMetaStoreManagerTest {
 
     // only 10 tasks are unassigned. Requesting 20, we should only receive those 10
     List<PolarisBaseEntity> lastTen =
-        metaStoreManager.loadTasks(callCtx, executorId, PageToken.fromLimit(20)).getEntities();
+        metaStoreManager
+            .loadTasks(callCtx, executorId, callCtx.getMetaStore().pageTokenBuilder().fromLimit(20))
+            .getEntities();
 
     Assertions.assertThat(lastTen)
         .isNotNull()
@@ -340,7 +347,9 @@ public abstract class BasePolarisMetaStoreManagerTest {
             .collect(Collectors.toSet());
 
     List<PolarisBaseEntity> emtpyList =
-        metaStoreManager.loadTasks(callCtx, executorId, PageToken.fromLimit(20)).getEntities();
+        metaStoreManager
+            .loadTasks(callCtx, executorId, callCtx.getMetaStore().pageTokenBuilder().fromLimit(20))
+            .getEntities();
 
     Assertions.assertThat(emtpyList).isNotNull().isEmpty();
 
@@ -348,7 +357,9 @@ public abstract class BasePolarisMetaStoreManagerTest {
 
     // all the tasks are unassigned. Fetch them all
     List<PolarisBaseEntity> allTasks =
-        metaStoreManager.loadTasks(callCtx, executorId, PageToken.fromLimit(20)).getEntities();
+        metaStoreManager
+            .loadTasks(callCtx, executorId, callCtx.getMetaStore().pageTokenBuilder().fromLimit(20))
+            .getEntities();
 
     Assertions.assertThat(allTasks)
         .isNotNull()
@@ -363,7 +374,9 @@ public abstract class BasePolarisMetaStoreManagerTest {
     timeSource.add(Duration.ofMinutes(10));
 
     List<PolarisBaseEntity> finalList =
-        metaStoreManager.loadTasks(callCtx, executorId, PageToken.fromLimit(20)).getEntities();
+        metaStoreManager
+            .loadTasks(callCtx, executorId, callCtx.getMetaStore().pageTokenBuilder().fromLimit(20))
+            .getEntities();
 
     Assertions.assertThat(finalList).isNotNull().isEmpty();
   }
@@ -394,7 +407,8 @@ public abstract class BasePolarisMetaStoreManagerTest {
                     try {
                       taskList =
                           metaStoreManager
-                              .loadTasks(callCtx, executorId, PageToken.fromLimit(5))
+                              .loadTasks(
+                                  callCtx, executorId, callCtx.getMetaStore().pageTokenBuilder().fromLimit(5))
                               .getEntities();
                       taskList.stream().map(PolarisBaseEntity::getName).forEach(taskNames::add);
                     } catch (RetryOnConcurrencyException e) {

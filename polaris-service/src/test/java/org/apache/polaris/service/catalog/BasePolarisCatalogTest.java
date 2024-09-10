@@ -62,7 +62,6 @@ import org.apache.polaris.core.admin.model.AwsStorageConfigInfo;
 import org.apache.polaris.core.admin.model.StorageConfigInfo;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
-import org.apache.polaris.core.catalog.pagination.PageToken;
 import org.apache.polaris.core.catalog.pagination.PolarisPage;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
@@ -1266,9 +1265,8 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
       Assertions.assertThat(catalog.listTables(NS)).isNotNull().hasSize(5);
 
       // List with a limit:
-      PolarisPage<?> firstListResult = catalog.listTables(
-          NS,
-          polarisContext.getMetaStore().pageTokenBuilder().fromLimit(2));
+      PolarisPage<?> firstListResult =
+          catalog.listTables(NS, polarisContext.getMetaStore().pageTokenBuilder().fromLimit(2));
       Assertions.assertThat(firstListResult.data.size()).isEqualTo(2);
       Assertions.assertThat(firstListResult.pageToken.toString()).isNotNull().isNotEmpty();
 
@@ -1295,7 +1293,12 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
     }
 
     for (int i = 0; i < 5; i++) {
-      catalog.buildView(TableIdentifier.of(NS, "pagination_view_" + i)).create();
+      catalog
+          .buildView(TableIdentifier.of(NS, "pagination_view_" + i))
+          .withQuery("a_" + i, "SELECT 1 id")
+          .withSchema(SCHEMA)
+          .withDefaultNamespace(NS)
+          .create();
     }
 
     try {
@@ -1303,9 +1306,8 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
       Assertions.assertThat(catalog.listViews(NS)).isNotNull().hasSize(5);
 
       // List with a limit:
-      PolarisPage<?> firstListResult = catalog.listViews(
-          NS,
-          polarisContext.getMetaStore().pageTokenBuilder().fromLimit(2));
+      PolarisPage<?> firstListResult =
+          catalog.listViews(NS, polarisContext.getMetaStore().pageTokenBuilder().fromLimit(2));
       Assertions.assertThat(firstListResult.data.size()).isEqualTo(2);
       Assertions.assertThat(firstListResult.pageToken.toString()).isNotNull().isNotEmpty();
 
@@ -1336,8 +1338,8 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
       Assertions.assertThat(catalog.listNamespaces()).isNotNull().hasSize(5);
 
       // List with a limit:
-      PolarisPage<?> firstListResult = catalog.listNamespaces(
-          polarisContext.getMetaStore().pageTokenBuilder().fromLimit(2));
+      PolarisPage<?> firstListResult =
+          catalog.listNamespaces(polarisContext.getMetaStore().pageTokenBuilder().fromLimit(2));
       Assertions.assertThat(firstListResult.data.size()).isEqualTo(2);
       Assertions.assertThat(firstListResult.pageToken.toString()).isNotNull().isNotEmpty();
 
@@ -1352,8 +1354,8 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
       Assertions.assertThat(finalListResult.pageToken).isNull();
 
       // List with page size matching the amount of data
-      PolarisPage<?> firstExactListResult = catalog.listNamespaces(
-          polarisContext.getMetaStore().pageTokenBuilder().fromLimit(5));
+      PolarisPage<?> firstExactListResult =
+          catalog.listNamespaces(polarisContext.getMetaStore().pageTokenBuilder().fromLimit(5));
       Assertions.assertThat(firstExactListResult.data.size()).isEqualTo(5);
       Assertions.assertThat(firstExactListResult.pageToken.toString()).isNotNull().isNotEmpty();
 
@@ -1363,8 +1365,8 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
       Assertions.assertThat(secondExactListResult.pageToken).isNull();
 
       // List with huge page size:
-      PolarisPage<?> bigListResult = catalog.listNamespaces(
-          polarisContext.getMetaStore().pageTokenBuilder().fromLimit(9999));
+      PolarisPage<?> bigListResult =
+          catalog.listNamespaces(polarisContext.getMetaStore().pageTokenBuilder().fromLimit(9999));
       Assertions.assertThat(bigListResult.data.size()).isEqualTo(5);
       Assertions.assertThat(bigListResult.pageToken).isNull();
     } finally {

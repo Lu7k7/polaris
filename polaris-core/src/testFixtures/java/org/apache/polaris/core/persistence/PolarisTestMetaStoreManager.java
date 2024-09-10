@@ -28,7 +28,7 @@ import java.util.Map;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.polaris.core.PolarisCallContext;
-import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.ReadEverythingPageToken;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
 import org.apache.polaris.core.entity.PolarisEntity;
@@ -655,7 +655,7 @@ public class PolarisTestMetaStoreManager {
                     path,
                     PolarisEntityType.NAMESPACE,
                     PolarisEntitySubType.NULL_SUBTYPE,
-                    PageToken.readEverything())
+                    ReadEverythingPageToken.get())
                 .getEntities();
         Assertions.assertThat(children).isNotNull();
         if (children.isEmpty() && entity.getType() == PolarisEntityType.NAMESPACE) {
@@ -666,7 +666,7 @@ public class PolarisTestMetaStoreManager {
                       path,
                       PolarisEntityType.TABLE_LIKE,
                       PolarisEntitySubType.ANY_SUBTYPE,
-                      PageToken.readEverything())
+                      ReadEverythingPageToken.get())
                   .getEntities();
           Assertions.assertThat(children).isNotNull();
         } else if (children.isEmpty()) {
@@ -677,7 +677,7 @@ public class PolarisTestMetaStoreManager {
                       path,
                       PolarisEntityType.CATALOG_ROLE,
                       PolarisEntitySubType.ANY_SUBTYPE,
-                      PageToken.readEverything())
+                      ReadEverythingPageToken.get())
                   .getEntities();
           Assertions.assertThat(children).isNotNull();
           // if only one left, it can be dropped.
@@ -1191,7 +1191,7 @@ public class PolarisTestMetaStoreManager {
                 path,
                 entityType,
                 entitySubType,
-                PageToken.readEverything())
+                ReadEverythingPageToken.get())
             .getEntities();
     Assertions.assertThat(result).isNotNull();
 
@@ -1505,7 +1505,7 @@ public class PolarisTestMetaStoreManager {
                 null,
                 PolarisEntityType.PRINCIPAL,
                 PolarisEntitySubType.NULL_SUBTYPE,
-                PageToken.readEverything())
+                ReadEverythingPageToken.get())
             .getEntities();
 
     // ensure not null, one element only
@@ -1532,7 +1532,7 @@ public class PolarisTestMetaStoreManager {
                 null,
                 PolarisEntityType.PRINCIPAL_ROLE,
                 PolarisEntitySubType.NULL_SUBTYPE,
-                PageToken.readEverything())
+                ReadEverythingPageToken.get())
             .getEntities();
 
     // ensure not null, one element only

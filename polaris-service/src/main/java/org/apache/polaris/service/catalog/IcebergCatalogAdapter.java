@@ -130,8 +130,12 @@ public class IcebergCatalogAdapter
     PolarisEntityManager entityManager =
         entityManagerFactory.getOrCreateEntityManager(
             CallContext.getCurrentContext().getRealmContext());
-    PageToken token = entityManager.newMetaStoreSession()
-        .pageTokenBuilder().fromString(pageToken).withPageSize(pageSize);
+    PageToken token =
+        entityManager
+            .newMetaStoreSession()
+            .pageTokenBuilder()
+            .fromString(pageToken)
+            .withPageSize(pageSize);
     var response =
         newHandlerWrapper(securityContext, prefix)
             .listNamespaces(namespaceOptional.orElse(Namespace.of()), token);
@@ -223,8 +227,12 @@ public class IcebergCatalogAdapter
     PolarisEntityManager entityManager =
         entityManagerFactory.getOrCreateEntityManager(
             CallContext.getCurrentContext().getRealmContext());
-    PageToken token = entityManager.newMetaStoreSession()
-        .pageTokenBuilder().fromString(pageToken).withPageSize(pageSize);
+    PageToken token =
+        entityManager
+            .newMetaStoreSession()
+            .pageTokenBuilder()
+            .fromString(pageToken)
+            .withPageSize(pageSize);
     return Response.ok(newHandlerWrapper(securityContext, prefix).listTables(ns, token)).build();
   }
 
@@ -363,8 +371,12 @@ public class IcebergCatalogAdapter
     PolarisEntityManager entityManager =
         entityManagerFactory.getOrCreateEntityManager(
             CallContext.getCurrentContext().getRealmContext());
-    PageToken token = entityManager.newMetaStoreSession()
-        .pageTokenBuilder().fromString(pageToken).withPageSize(pageSize);
+    PageToken token =
+        entityManager
+            .newMetaStoreSession()
+            .pageTokenBuilder()
+            .fromString(pageToken)
+            .withPageSize(pageSize);
     return Response.ok(newHandlerWrapper(securityContext, prefix).listViews(ns, token)).build();
   }
 

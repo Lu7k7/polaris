@@ -18,9 +18,6 @@
  */
 package org.apache.polaris.core.catalog.pagination;
 
-import com.sun.jersey.core.util.Base64;
-
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /** A PageToken implementation that uses an offset to manage pagination. */
@@ -35,14 +32,28 @@ public class OffsetPageToken extends PageToken {
   /** The offset to use to start with. */
   private static final int BASE_OFFSET = 0;
 
-  public OffsetPageToken(int offset, int pageSize) {
+  private OffsetPageToken(int offset, int pageSize) {
     this.offset = offset;
     this.pageSize = pageSize;
+    validate();
   }
 
   @Override
-  public PageTokenBuilder<OffsetPageToken> builder() {
+  protected void validate() {
+    if (offset < 0) {
+      throw new IllegalArgumentException("Offset must be greater than zero");
+    }
+    super.validate();
+  }
+
+  /** Get a new `EntityIdPageTokenBuilder` instance */
+  public static PageTokenBuilder<OffsetPageToken> builder() {
     return new OffsetPageTokenBuilder();
+  }
+
+  @Override
+  protected PageTokenBuilder<?> getBuilder() {
+    return OffsetPageToken.builder();
   }
 
   @Override
@@ -51,6 +62,8 @@ public class OffsetPageToken extends PageToken {
   }
 
   public static class OffsetPageTokenBuilder extends PageTokenBuilder<OffsetPageToken> {
+
+    private OffsetPageTokenBuilder() {}
 
     @Override
     public String tokenPrefix() {
@@ -64,21 +77,9 @@ public class OffsetPageToken extends PageToken {
     }
 
     @Override
-    public OffsetPageToken readEverything() {
-      return new OffsetPageToken(BASE_OFFSET, Integer.MAX_VALUE);
-    }
-
-    @Override
     protected OffsetPageToken fromStringComponents(List<String> components) {
-      OffsetPageToken token =
-          new OffsetPageToken(
-              Integer.parseInt(components.get(1)), Integer.parseInt(components.get(2)));
-
-      if (token.hashCode() != Integer.parseInt(components.get(3))) {
-        throw new IllegalArgumentException(
-            "Invalid checksum for offset token: " + token.toString());
-      }
-      return token;
+      return new OffsetPageToken(
+          Integer.parseInt(components.get(0)), Integer.parseInt(components.get(1)));
     }
 
     @Override
@@ -88,12 +89,20 @@ public class OffsetPageToken extends PageToken {
   }
 
   @Override
-  public OffsetPageToken updated(List<?> newData) {
-    return new OffsetPageToken(this.offset + newData.size(), pageSize);
+  public PageToken updated(List<?> newData) {
+    if (newData == null || newData.size() < this.pageSize) {
+      return PageToken.DONE;
+    } else {
+      return new OffsetPageToken(this.offset + newData.size(), pageSize);
+    }
   }
 
   @Override
   public OffsetPageToken withPageSize(Integer pageSize) {
-    return new OffsetPageToken(this.offset, pageSize);
+    if (pageSize == null) {
+      return new OffsetPageToken(BASE_OFFSET, this.pageSize);
+    } else {
+      return new OffsetPageToken(this.offset, pageSize);
+    }
   }
 }
