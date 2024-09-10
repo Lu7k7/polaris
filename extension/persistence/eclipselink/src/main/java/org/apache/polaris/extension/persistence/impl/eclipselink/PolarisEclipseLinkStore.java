@@ -23,6 +23,8 @@ import jakarta.persistence.TypedQuery;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.apache.polaris.core.PolarisDiagnostics;
 import org.apache.polaris.core.catalog.pagination.EntityIdPageToken;
 import org.apache.polaris.core.catalog.pagination.PageToken;

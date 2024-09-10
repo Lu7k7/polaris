@@ -2018,7 +2018,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
         callCtx, () -> this.loadEntity(callCtx, ms, entityCatalogId, entityId));
   }
 
-  /** Refer to {@link #loadTasks(PolarisCallContext, String, int, PageToken)} */
+  /** Refer to {@link #loadTasks(PolarisCallContext, String, PageToken)} */
   private @NotNull EntitiesResult loadTasks(
       @NotNull PolarisCallContext callCtx,
       @NotNull PolarisMetaStoreSession ms,
