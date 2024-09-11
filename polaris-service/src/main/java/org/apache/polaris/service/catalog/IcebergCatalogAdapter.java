@@ -22,6 +22,7 @@ import static org.apache.polaris.service.catalog.AccessDelegationMode.VENDED_CRE
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import java.net.URLEncoder;
@@ -109,8 +110,11 @@ public class IcebergCatalogAdapter
         polarisAuthorizer);
   }
 
+  /** Build a {@link PageToken} from a string and page size. */
   private PageToken buildPageToken(
-      PolarisEntityManager entityManager, String tokenString, Integer pageSize) {
+      PolarisEntityManager entityManager,
+      @Nullable String tokenString,
+      @Nullable Integer pageSize) {
     if (tokenString != null) {
       return entityManager
           .newMetaStoreSession()

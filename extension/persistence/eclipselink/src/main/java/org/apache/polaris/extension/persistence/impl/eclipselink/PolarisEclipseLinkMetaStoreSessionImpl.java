@@ -565,6 +565,7 @@ public class PolarisEclipseLinkMetaStoreSessionImpl implements PolarisMetaStoreS
     } else {
       // In this case, we cannot push the filter down into the query. We must therefore remove
       // the page size limit from the PageToken and filter on the client side.
+      // TODO Implement a generic predicate that can be pushed down into different metastores
       PageToken unlimitedPageSizeToken = pageToken.withPageSize(Integer.MAX_VALUE);
       List<ModelEntity> rawData =
           this.store.lookupFullEntitiesActive(

@@ -21,8 +21,8 @@ package org.apache.polaris.core.catalog.pagination;
 import java.util.List;
 
 /**
- * A wrapper for a List of data and a {@link PageToken} that can be used to continue the listing
- * operation that generated that data.
+ * A wrapper for a {@link List} of data and a {@link PageToken} that can be used to continue the
+ * listing operation that generated that data.
  */
 public class PolarisPage<T> {
   public final PageToken pageToken;
@@ -33,7 +33,7 @@ public class PolarisPage<T> {
     this.data = data;
   }
 
-  /** Used to wrap a List of data into a PolarisPage when there is no more data */
+  /** Used to wrap a {@link List<T>} of data into a {@link PolarisPage<T>} when there is no more data */
   public static <T> PolarisPage<T> fromData(List<T> data) {
     return new PolarisPage<>(PageToken.DONE, data);
   }

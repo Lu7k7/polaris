@@ -31,7 +31,7 @@ public class ReadEverythingPageToken extends PageToken {
     validate();
   }
 
-  /** Get a ReadEverythingPageToken */
+  /** Get a {@link ReadEverythingPageToken} */
   public static ReadEverythingPageToken get() {
     return new ReadEverythingPageToken();
   }
@@ -77,11 +77,13 @@ public class ReadEverythingPageToken extends PageToken {
     return List.of();
   }
 
+  /** Any time {@link ReadEverythingPageToken} is updated, everything has been read */
   @Override
   public PageToken updated(List<?> newData) {
     return PageToken.DONE;
   }
 
+  /** {@link ReadEverythingPageToken} does not support page size */
   @Override
   public PageToken withPageSize(Integer pageSize) {
     if (pageSize == null) {

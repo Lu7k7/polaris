@@ -69,7 +69,7 @@ public abstract class PageToken {
      */
     public abstract int expectedComponents();
 
-    /** Deserialize a string into a `PageToken` */
+    /** Deserialize a string into a {@link PageToken} */
     public final PageToken fromString(String tokenString) {
       if (tokenString == null) {
         throw new IllegalArgumentException("Cannot build page token from null string");
@@ -90,6 +90,7 @@ public abstract class PageToken {
             throw new IllegalArgumentException("Invalid token format in token: " + tokenString);
           }
 
+          // Cut off prefix and checksum
           T result = fromStringComponents(Arrays.asList(parts).subList(1, parts.length - 1));
           result.validate();
           return result;
@@ -99,7 +100,7 @@ public abstract class PageToken {
       }
     }
 
-    /** Construct a `PageToken` from a plain limit */
+    /** Construct a {@link PageToken} from a plain limit */
     public final PageToken fromLimit(Integer limit) {
       if (limit == null) {
         return ReadEverythingPageToken.get();
@@ -108,41 +109,42 @@ public abstract class PageToken {
       }
     }
 
-    /** Construct a `PageToken` from a plain limit */
+    /** Construct a {@link PageToken} from a plain limit */
     protected abstract T fromLimitImpl(int limit);
 
     /**
-     * PageTokenBuilder implementations should implement this to build a PageToken from components
-     * in a string token. These components should be the same ones returned by `getComponents` and
-     * won't include the token prefix or the checksum.
+     * {@link PageTokenBuilder} implementations should implement this to build a {@link PageToken}
+     * from components in a string token. These components should be the same ones returned by
+     * {@link #getComponents()} and won't include the token prefix or the checksum.
      */
     protected abstract T fromStringComponents(List<String> components);
   }
 
-  /** Convert this PageToken to components that the serialized token string will be built from. */
+  /** Convert this into components that the serialized token string will be built from. */
   protected abstract List<String> getComponents();
 
   /**
    * Builds a new page token to reflect new data that's been read. If the amount of data read is
-   * less than the pageSize, this will return `PageToken.DONE` (done)
+   * less than the pageSize, this will return {@link PageToken#DONE}(null)
    */
   protected abstract PageToken updated(List<?> newData);
 
   /**
-   * Builds a `PolarisPage<T>` from a `List<T>`. The `PageToken` attached to the new
-   * `PolarisPage<T>` is the same as the result of calling `updated(data)` on this `PageToken`.
+   * Builds a {@link PolarisPage<T>} from a {@link List<T>}. The {@link PageToken} attached to the
+   * new {@link PolarisPage<T>} is the same as the result of calling {@link #updated(List)} on this
+   * {@link PageToken}.
    */
   public final <T> PolarisPage<T> buildNextPage(List<T> data) {
     return new PolarisPage<T>(updated(data), data);
   }
 
   /**
-   * Return a new PageToken with an updated pageSize. If the pageSize provided is null, the existing
-   * pageSize will be preserved.
+   * Return a new {@link PageToken} with an updated page size. If the pageSize provided is null, the
+   * existing page size will be preserved.
    */
   public abstract PageToken withPageSize(Integer pageSize);
 
-  /** Serialize a PageToken into a string */
+  /** Serialize a {@link PageToken} into a string */
   @Override
   public final String toString() {
     List<String> components = getComponents();

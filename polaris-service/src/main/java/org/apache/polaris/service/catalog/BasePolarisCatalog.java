@@ -443,6 +443,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
     return true;
   }
 
+  /** Check whether pagination is enabled for list operations */
   private boolean paginationEnabled() {
     return callContext
         .getPolarisCallContext()
