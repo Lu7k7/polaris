@@ -28,9 +28,9 @@ import org.apache.polaris.core.catalog.pagination.PageToken;
 import org.apache.polaris.core.catalog.pagination.PolarisPage;
 
 /**
- * Used in lieu of {@link ListNamespacesResponse} when there may be a {@link PageToken}
- * associated with the response. Callers can use this {@link PageToken} to continue the
- * listing operation and obtain more results.
+ * Used in lieu of {@link ListNamespacesResponse} when there may be a {@link PageToken} associated
+ * with the response. Callers can use this {@link PageToken} to continue the listing operation and
+ * obtain more results.
  */
 public class ListNamespacesResponseWithPageToken extends ListNamespacesResponse {
   private final PageToken pageToken;

@@ -33,7 +33,9 @@ public class PolarisPage<T> {
     this.data = data;
   }
 
-  /** Used to wrap a {@link List<T>} of data into a {@link PolarisPage<T>} when there is no more data */
+  /**
+   * Used to wrap a {@link List<T>} of data into a {@link PolarisPage<T>} when there is no more data
+   */
   public static <T> PolarisPage<T> fromData(List<T> data) {
     return new PolarisPage<>(PageToken.DONE, data);
   }

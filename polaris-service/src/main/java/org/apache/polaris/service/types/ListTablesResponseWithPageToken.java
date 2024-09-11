@@ -23,15 +23,14 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import java.util.List;
 import org.apache.iceberg.catalog.TableIdentifier;
-import org.apache.iceberg.rest.responses.ListNamespacesResponse;
 import org.apache.iceberg.rest.responses.ListTablesResponse;
 import org.apache.polaris.core.catalog.pagination.PageToken;
 import org.apache.polaris.core.catalog.pagination.PolarisPage;
 
 /**
- * Used in lieu of {@link ListTablesResponse} when there may be a {@link PageToken}
- * associated with the response. Callers can use this {@link PageToken} to continue the
- * listing operation and obtain more results.
+ * Used in lieu of {@link ListTablesResponse} when there may be a {@link PageToken} associated with
+ * the response. Callers can use this {@link PageToken} to continue the listing operation and obtain
+ * more results.
  */
 public class ListTablesResponseWithPageToken extends ListTablesResponse {
   private final PageToken pageToken;
