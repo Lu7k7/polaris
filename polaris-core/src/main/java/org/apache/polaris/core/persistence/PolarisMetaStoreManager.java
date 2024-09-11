@@ -314,6 +314,7 @@ public interface PolarisMetaStoreManager {
     private final List<PolarisEntityActiveRecord> entities;
     private final Optional<PageToken> pageTokenOpt;
 
+    /** Create a {@link ListEntitiesResult} from a {@link PolarisPage} */
     public static ListEntitiesResult fromPolarisPage(
         PolarisPage<PolarisEntityActiveRecord> polarisPage) {
       return new ListEntitiesResult(polarisPage.data, Optional.ofNullable(polarisPage.pageToken));

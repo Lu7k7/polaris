@@ -18,9 +18,17 @@
  */
 package org.apache.polaris.core.catalog.pagination;
 
+import org.apache.polaris.core.entity.PolarisBaseEntity;
+import org.apache.polaris.core.persistence.models.ModelEntity;
+
 import java.util.List;
 
-/** A PageToken implementation that uses an offset to manage pagination. */
+/**
+ * A simple {@link PageToken} implementation that tracks the number of records
+ * returned. Entities are meant to be filtered during listing such that when a
+ * token with offset N is supplied, the first N records are omitted from the
+ * results.
+ */
 public class OffsetPageToken extends PageToken {
 
   /**
@@ -61,6 +69,7 @@ public class OffsetPageToken extends PageToken {
     return List.of(String.valueOf(this.offset), String.valueOf(this.pageSize));
   }
 
+  /** A {@link PageTokenBuilder} implementation for {@link OffsetPageToken} */
   public static class OffsetPageTokenBuilder extends PageTokenBuilder<OffsetPageToken> {
 
     private OffsetPageTokenBuilder() {}

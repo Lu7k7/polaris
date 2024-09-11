@@ -290,10 +290,10 @@ public class PolarisEclipseLinkStore {
     // Currently check against ENTITIES not joining with ENTITIES_ACTIVE
     String hql =
         "SELECT m from ModelEntity m "
-            + " where m.catalogId=:catalogId and m.parentId=:parentId and m.typeCode=:typeCode and m.id > :tokenId";
+            + "where m.catalogId=:catalogId and m.parentId=:parentId and m.typeCode=:typeCode and m.id > :tokenId";
 
     if (pageToken instanceof EntityIdPageToken) {
-      hql += " ORDER BY m.id ASC";
+      hql += " order by m.id asc";
     }
 
     TypedQuery<ModelEntity> query =

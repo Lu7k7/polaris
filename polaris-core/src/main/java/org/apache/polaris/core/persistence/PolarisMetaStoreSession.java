@@ -533,7 +533,7 @@ public interface PolarisMetaStoreSession {
    * This method is used to construct page tokens when the metastore may need them. Different
    * metastore implementations may bring their own PageToken implementations or share them.
    *
-   * @return A `PageToken.PageTokenBuilder` implementation compatible with this
+   * @return A {@link PageToken.PageTokenBuilder} implementation compatible with this
    *     `PolarisMetaStoreSession` implementation
    */
   @NotNull

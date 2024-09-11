@@ -22,7 +22,12 @@ import java.util.List;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.persistence.models.ModelEntity;
 
-// TODO implement and comment
+/**
+ * A {@link PageToken} implementation that tracks the greatest ID from either
+ * {@link PolarisBaseEntity} or {@link ModelEntity} objects supplied in updates.
+ * Entities are meant to be filtered during listing such that only entities with
+ * and ID greater than the ID of the token are returned.
+ */
 public class EntityIdPageToken extends PageToken {
   public long id;
 
@@ -32,8 +37,11 @@ public class EntityIdPageToken extends PageToken {
     validate();
   }
 
+  /** The minimum ID that could be attached to an entity */
+  private static final long MINIMUM_ID = 0;
+
   /** The entity ID to use to start with. */
-  private static final long BASE_ID = -1L;
+  private static final long BASE_ID = MINIMUM_ID - 1;
 
   @Override
   protected List<String> getComponents() {
@@ -50,6 +58,7 @@ public class EntityIdPageToken extends PageToken {
     return EntityIdPageToken.builder();
   }
 
+  /** A {@link PageTokenBuilder} implementation for {@link EntityIdPageToken} */
   public static class EntityIdPageTokenBuilder extends PageTokenBuilder<EntityIdPageToken> {
 
     @Override
@@ -80,10 +89,11 @@ public class EntityIdPageToken extends PageToken {
     if (newData == null || newData.size() < this.pageSize) {
       return PageToken.DONE;
     } else {
-      if (newData.get(0) instanceof ModelEntity) {
+      var head = newData.get(0);
+      if (head instanceof ModelEntity) {
         return new EntityIdPageToken(
             ((ModelEntity) newData.get(newData.size() - 1)).getId(), this.pageSize);
-      } else if (newData.get(0) instanceof PolarisBaseEntity) {
+      } else if (head instanceof PolarisBaseEntity) {
         return new EntityIdPageToken(
             ((PolarisBaseEntity) newData.get(newData.size() - 1)).getId(), this.pageSize);
       } else {
