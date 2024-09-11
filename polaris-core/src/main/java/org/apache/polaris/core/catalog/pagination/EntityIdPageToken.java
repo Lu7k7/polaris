@@ -23,10 +23,10 @@ import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.persistence.models.ModelEntity;
 
 /**
- * A {@link PageToken} implementation that tracks the greatest ID from either
- * {@link PolarisBaseEntity} or {@link ModelEntity} objects supplied in updates.
- * Entities are meant to be filtered during listing such that only entities with
- * and ID greater than the ID of the token are returned.
+ * A {@link PageToken} implementation that tracks the greatest ID from either {@link
+ * PolarisBaseEntity} or {@link ModelEntity} objects supplied in updates. Entities are meant to be
+ * filtered during listing such that only entities with and ID greater than the ID of the token are
+ * returned.
  */
 public class EntityIdPageToken extends PageToken {
   public long id;

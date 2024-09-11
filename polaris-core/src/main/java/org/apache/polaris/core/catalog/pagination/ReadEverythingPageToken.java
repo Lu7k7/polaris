@@ -21,9 +21,8 @@ package org.apache.polaris.core.catalog.pagination;
 import java.util.List;
 
 /**
- * A {@link PageToken} implementation for readers who want to read everything.
- * The behavior when using this token should be the same as when reading
- * without a token.
+ * A {@link PageToken} implementation for readers who want to read everything. The behavior when
+ * using this token should be the same as when reading without a token.
  */
 public class ReadEverythingPageToken extends PageToken {
 
