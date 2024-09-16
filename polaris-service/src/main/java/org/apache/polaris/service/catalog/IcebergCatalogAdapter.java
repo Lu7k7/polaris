@@ -22,6 +22,7 @@ import static org.apache.polaris.service.catalog.AccessDelegationMode.VENDED_CRE
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import java.net.URLEncoder;
@@ -51,6 +52,7 @@ import org.apache.iceberg.rest.requests.UpdateTableRequest;
 import org.apache.iceberg.rest.responses.ConfigResponse;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
+import org.apache.polaris.core.catalog.pagination.PageToken;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.PolarisEntity;
@@ -108,6 +110,22 @@ public class IcebergCatalogAdapter
         polarisAuthorizer);
   }
 
+  /** Build a {@link PageToken} from a string and page size. */
+  private PageToken buildPageToken(
+      PolarisEntityManager entityManager,
+      @Nullable String tokenString,
+      @Nullable Integer pageSize) {
+    if (tokenString != null) {
+      return entityManager
+          .newMetaStoreSession()
+          .pageTokenBuilder()
+          .fromString(tokenString)
+          .withPageSize(pageSize);
+    } else {
+      return entityManager.newMetaStoreSession().pageTokenBuilder().fromLimit(pageSize);
+    }
+  }
+
   @Override
   public Response createNamespace(
       String prefix,
@@ -127,10 +145,16 @@ public class IcebergCatalogAdapter
       SecurityContext securityContext) {
     Optional<Namespace> namespaceOptional =
         Optional.ofNullable(parent).map(IcebergCatalogAdapter::decodeNamespace);
-    return Response.ok(
-            newHandlerWrapper(securityContext, prefix)
-                .listNamespaces(namespaceOptional.orElse(Namespace.of())))
-        .build();
+
+    PolarisEntityManager entityManager =
+        entityManagerFactory.getOrCreateEntityManager(
+            CallContext.getCurrentContext().getRealmContext());
+    PageToken token = buildPageToken(entityManager, pageToken, pageSize);
+
+    var response =
+        newHandlerWrapper(securityContext, prefix)
+            .listNamespaces(namespaceOptional.orElse(Namespace.of()), token);
+    return Response.ok(response).build();
   }
 
   @Override
@@ -225,7 +249,12 @@ public class IcebergCatalogAdapter
       Integer pageSize,
       SecurityContext securityContext) {
     Namespace ns = decodeNamespace(namespace);
-    return Response.ok(newHandlerWrapper(securityContext, prefix).listTables(ns)).build();
+
+    PolarisEntityManager entityManager =
+        entityManagerFactory.getOrCreateEntityManager(
+            CallContext.getCurrentContext().getRealmContext());
+    PageToken token = buildPageToken(entityManager, pageToken, pageSize);
+    return Response.ok(newHandlerWrapper(securityContext, prefix).listTables(ns, token)).build();
   }
 
   @Override
@@ -361,7 +390,11 @@ public class IcebergCatalogAdapter
       Integer pageSize,
       SecurityContext securityContext) {
     Namespace ns = decodeNamespace(namespace);
-    return Response.ok(newHandlerWrapper(securityContext, prefix).listViews(ns)).build();
+    PolarisEntityManager entityManager =
+        entityManagerFactory.getOrCreateEntityManager(
+            CallContext.getCurrentContext().getRealmContext());
+    PageToken token = buildPageToken(entityManager, pageToken, pageSize);
+    return Response.ok(newHandlerWrapper(securityContext, prefix).listViews(ns, token)).build();
   }
 
   @Override

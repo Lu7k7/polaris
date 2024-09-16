@@ -19,12 +19,18 @@
 package org.apache.polaris.core.persistence;
 
 import com.google.common.base.Predicates;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.polaris.core.PolarisCallContext;
+import org.apache.polaris.core.catalog.pagination.OffsetPageToken;
+import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.PolarisPage;
+import org.apache.polaris.core.catalog.pagination.ReadEverythingPageToken;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
 import org.apache.polaris.core.entity.PolarisEntitiesActiveKey;
@@ -319,20 +325,23 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
 
   /** {@inheritDoc} */
   @Override
-  public @NotNull List<PolarisEntityActiveRecord> listActiveEntities(
-      @NotNull PolarisCallContext callCtx,
-      long catalogId,
-      long parentId,
-      @NotNull PolarisEntityType entityType) {
-    return listActiveEntities(callCtx, catalogId, parentId, entityType, Predicates.alwaysTrue());
-  }
-
-  @Override
-  public @NotNull List<PolarisEntityActiveRecord> listActiveEntities(
+  public @NotNull PolarisPage<PolarisEntityActiveRecord> listActiveEntities(
       @NotNull PolarisCallContext callCtx,
       long catalogId,
       long parentId,
       @NotNull PolarisEntityType entityType,
+      @NotNull PageToken pageToken) {
+    return listActiveEntities(
+        callCtx, catalogId, parentId, entityType, pageToken, Predicates.alwaysTrue());
+  }
+
+  @Override
+  public @NotNull PolarisPage<PolarisEntityActiveRecord> listActiveEntities(
+      @NotNull PolarisCallContext callCtx,
+      long catalogId,
+      long parentId,
+      @NotNull PolarisEntityType entityType,
+      @NotNull PageToken pageToken,
       @NotNull Predicate<PolarisBaseEntity> entityFilter) {
     // full range scan under the parent for that type
     return listActiveEntities(
@@ -340,7 +349,7 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
         catalogId,
         parentId,
         entityType,
-        Integer.MAX_VALUE,
+        pageToken,
         entityFilter,
         entity ->
             new PolarisEntityActiveRecord(
@@ -353,23 +362,38 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
   }
 
   @Override
-  public @NotNull <T> List<T> listActiveEntities(
+  public @NotNull <T> PolarisPage<T> listActiveEntities(
       @NotNull PolarisCallContext callCtx,
       long catalogId,
       long parentId,
       @NotNull PolarisEntityType entityType,
-      int limit,
+      @NotNull PageToken pageToken,
       @NotNull Predicate<PolarisBaseEntity> entityFilter,
       @NotNull Function<PolarisBaseEntity, T> transformer) {
+    if (!(pageToken instanceof ReadEverythingPageToken)
+        && !(pageToken instanceof OffsetPageToken)) {
+      throw new IllegalArgumentException("Unexpected pageToken: " + pageToken);
+    }
+
     // full range scan under the parent for that type
-    return this.store
-        .getSliceEntitiesActive()
-        .readRange(this.store.buildPrefixKeyComposite(catalogId, parentId, entityType.getCode()))
-        .stream()
-        .filter(entityFilter)
-        .limit(limit)
-        .map(transformer)
-        .collect(Collectors.toList());
+    Stream<PolarisBaseEntity> partialResults =
+        this.store
+            .getSliceEntitiesActive()
+            .readRange(
+                this.store.buildPrefixKeyComposite(catalogId, parentId, entityType.getCode()))
+            .stream()
+            .filter(entityFilter);
+
+    if (pageToken instanceof OffsetPageToken) {
+      partialResults =
+          partialResults
+              .sorted(Comparator.comparingLong(PolarisEntityCore::getId))
+              .skip(((OffsetPageToken) pageToken).offset)
+              .limit(pageToken.pageSize);
+    }
+
+    List<T> entities = partialResults.map(transformer).collect(Collectors.toList());
+    return pageToken.buildNextPage(entities);
   }
 
   /** {@inheritDoc} */
@@ -569,5 +593,10 @@ public class PolarisTreeMapMetaStoreSessionImpl implements PolarisMetaStoreSessi
   @Override
   public void rollback() {
     this.store.rollback();
+  }
+
+  @Override
+  public @NotNull PageToken.PageTokenBuilder<?> pageTokenBuilder() {
+    return OffsetPageToken.builder();
   }
 }

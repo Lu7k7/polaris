@@ -176,4 +176,12 @@ public class PolarisConfiguration<T> {
               "If set to true, allows tables to be dropped with the purge parameter set to true.")
           .defaultValue(true)
           .build();
+
+  public static final PolarisConfiguration<Boolean> LIST_PAGINATION_ENABLED =
+      PolarisConfiguration.<Boolean>builder()
+          .key("LIST_PAGINATION_ENABLED")
+          .catalogConfig("list-pagination.enabled")
+          .description("If set to true, pagination for APIs like listTables is enabled")
+          .defaultValue(false)
+          .build();
 }

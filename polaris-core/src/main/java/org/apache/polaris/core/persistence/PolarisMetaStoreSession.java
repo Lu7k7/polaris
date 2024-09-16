@@ -23,6 +23,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.apache.polaris.core.PolarisCallContext;
+import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.PolarisPage;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
 import org.apache.polaris.core.entity.PolarisEntitiesActiveKey;
@@ -306,11 +308,12 @@ public interface PolarisMetaStoreSession {
    * @return the list of entities_active records for the specified list operation
    */
   @NotNull
-  List<PolarisEntityActiveRecord> listActiveEntities(
+  PolarisPage<PolarisEntityActiveRecord> listActiveEntities(
       @NotNull PolarisCallContext callCtx,
       long catalogId,
       long parentId,
-      @NotNull PolarisEntityType entityType);
+      @NotNull PolarisEntityType entityType,
+      @NotNull PageToken pageToken);
 
   /**
    * List active entities where some predicate returns true
@@ -324,11 +327,12 @@ public interface PolarisMetaStoreSession {
    * @return the list of entities for which the predicate returns true
    */
   @NotNull
-  List<PolarisEntityActiveRecord> listActiveEntities(
+  PolarisPage<PolarisEntityActiveRecord> listActiveEntities(
       @NotNull PolarisCallContext callCtx,
       long catalogId,
       long parentId,
       @NotNull PolarisEntityType entityType,
+      @NotNull PageToken pageToken,
       @NotNull Predicate<PolarisBaseEntity> entityFilter);
 
   /**
@@ -339,7 +343,7 @@ public interface PolarisMetaStoreSession {
    * @param catalogId catalog id for that entity, NULL_ID if the entity is top-level
    * @param parentId id of the parent, can be the special 0 value representing the root entity
    * @param entityType type of entities to list
-   * @param limit the max number of items to return
+   * @param pageToken the pagination token to use
    * @param entityFilter the filter to be applied to each entity. Only entities where the predicate
    *     returns true are returned in the list
    * @param transformer the transformation function applied to the {@link PolarisBaseEntity} before
@@ -347,12 +351,12 @@ public interface PolarisMetaStoreSession {
    * @return the list of entities for which the predicate returns true
    */
   @NotNull
-  <T> List<T> listActiveEntities(
+  <T> PolarisPage<T> listActiveEntities(
       @NotNull PolarisCallContext callCtx,
       long catalogId,
       long parentId,
       @NotNull PolarisEntityType entityType,
-      int limit,
+      @NotNull PageToken pageToken,
       @NotNull Predicate<PolarisBaseEntity> entityFilter,
       @NotNull Function<PolarisBaseEntity, T> transformer);
 
@@ -524,4 +528,14 @@ public interface PolarisMetaStoreSession {
 
   /** Rollback the current transaction */
   void rollback();
+
+  /**
+   * This method is used to construct page tokens when the metastore may need them. Different
+   * metastore implementations may bring their own PageToken implementations or share them.
+   *
+   * @return A {@link PageToken.PageTokenBuilder} implementation compatible with this
+   *     `PolarisMetaStoreSession` implementation
+   */
+  @NotNull
+  PageToken.PageTokenBuilder<?> pageTokenBuilder();
 }

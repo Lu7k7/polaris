@@ -72,6 +72,8 @@ import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizableOperation;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
 import org.apache.polaris.core.catalog.PolarisCatalogHelpers;
+import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.PolarisPage;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.entity.CatalogEntity;
 import org.apache.polaris.core.entity.PolarisEntitySubType;
@@ -83,6 +85,8 @@ import org.apache.polaris.core.persistence.resolver.ResolverPath;
 import org.apache.polaris.core.persistence.resolver.ResolverStatus;
 import org.apache.polaris.core.storage.PolarisStorageActions;
 import org.apache.polaris.service.context.CallContextCatalogFactory;
+import org.apache.polaris.service.types.ListNamespacesResponseWithPageToken;
+import org.apache.polaris.service.types.ListTablesResponseWithPageToken;
 import org.apache.polaris.service.types.NotificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -409,6 +413,21 @@ public class PolarisCatalogHandlerWrapper {
     initializeCatalog();
   }
 
+  public ListNamespacesResponseWithPageToken listNamespaces(Namespace parent, PageToken pageToken) {
+    PolarisAuthorizableOperation op = PolarisAuthorizableOperation.LIST_NAMESPACES;
+    authorizeBasicNamespaceOperationOrThrow(op, parent);
+
+    if (baseCatalog instanceof BasePolarisCatalog bpc) {
+      return ListNamespacesResponseWithPageToken.fromPolarisPage(
+          doCatalogOperation(() -> bpc.listNamespaces(parent, pageToken)));
+    } else {
+      return ListNamespacesResponseWithPageToken.fromPolarisPage(
+          PolarisPage.fromData(
+              doCatalogOperation(() -> CatalogHandlers.listNamespaces(namespaceCatalog, parent))
+                  .namespaces()));
+    }
+  }
+
   public ListNamespacesResponse listNamespaces(Namespace parent) {
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.LIST_NAMESPACES;
     authorizeBasicNamespaceOperationOrThrow(op, parent);
@@ -520,6 +539,21 @@ public class PolarisCatalogHandlerWrapper {
 
     return doCatalogOperation(
         () -> CatalogHandlers.updateNamespaceProperties(namespaceCatalog, namespace, request));
+  }
+
+  public ListTablesResponseWithPageToken listTables(Namespace namespace, PageToken pageToken) {
+    PolarisAuthorizableOperation op = PolarisAuthorizableOperation.LIST_TABLES;
+    authorizeBasicNamespaceOperationOrThrow(op, namespace);
+
+    if (baseCatalog instanceof BasePolarisCatalog bpc) {
+      return ListTablesResponseWithPageToken.fromPolarisPage(
+          doCatalogOperation(() -> bpc.listTables(namespace, pageToken)));
+    } else {
+      return ListTablesResponseWithPageToken.fromPolarisPage(
+          PolarisPage.fromData(
+              doCatalogOperation(() -> CatalogHandlers.listTables(baseCatalog, namespace))
+                  .identifiers()));
+    }
   }
 
   public ListTablesResponse listTables(Namespace namespace) {
@@ -980,6 +1014,21 @@ public class PolarisCatalogHandlerWrapper {
     authorizeBasicNamespaceOperationOrThrow(op, namespace);
 
     return doCatalogOperation(() -> CatalogHandlers.listViews(viewCatalog, namespace));
+  }
+
+  public ListTablesResponseWithPageToken listViews(Namespace namespace, PageToken pageToken) {
+    PolarisAuthorizableOperation op = PolarisAuthorizableOperation.LIST_VIEWS;
+    authorizeBasicNamespaceOperationOrThrow(op, namespace);
+
+    if (baseCatalog instanceof BasePolarisCatalog bpc) {
+      return ListTablesResponseWithPageToken.fromPolarisPage(
+          doCatalogOperation(() -> bpc.listViews(namespace, pageToken)));
+    } else {
+      return ListTablesResponseWithPageToken.fromPolarisPage(
+          PolarisPage.fromData(
+              doCatalogOperation(() -> CatalogHandlers.listTables(baseCatalog, namespace))
+                  .identifiers()));
+    }
   }
 
   public LoadViewResponse createView(Namespace namespace, CreateViewRequest request) {

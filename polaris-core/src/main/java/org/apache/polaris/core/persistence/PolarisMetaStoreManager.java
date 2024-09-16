@@ -24,9 +24,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.polaris.core.PolarisCallContext;
+import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.PolarisPage;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
 import org.apache.polaris.core.entity.PolarisEntity;
@@ -309,6 +312,13 @@ public interface PolarisMetaStoreManager {
 
     // null if not success. Else the list of entities being returned
     private final List<PolarisEntityActiveRecord> entities;
+    private final Optional<PageToken> pageTokenOpt;
+
+    /** Create a {@link ListEntitiesResult} from a {@link PolarisPage} */
+    public static ListEntitiesResult fromPolarisPage(
+        PolarisPage<PolarisEntityActiveRecord> polarisPage) {
+      return new ListEntitiesResult(polarisPage.data, Optional.ofNullable(polarisPage.pageToken));
+    }
 
     /**
      * Constructor for an error
@@ -318,9 +328,11 @@ public interface PolarisMetaStoreManager {
      */
     public ListEntitiesResult(
         @NotNull PolarisMetaStoreManager.ReturnStatus errorCode,
-        @Nullable String extraInformation) {
+        @Nullable String extraInformation,
+        @NotNull Optional<PageToken> pageTokenOpt) {
       super(errorCode, extraInformation);
       this.entities = null;
+      this.pageTokenOpt = pageTokenOpt;
     }
 
     /**
@@ -328,22 +340,31 @@ public interface PolarisMetaStoreManager {
      *
      * @param entities list of entities being returned, implies success
      */
-    public ListEntitiesResult(@NotNull List<PolarisEntityActiveRecord> entities) {
+    public ListEntitiesResult(
+        @NotNull List<PolarisEntityActiveRecord> entities,
+        @Nullable Optional<PageToken> pageTokenOpt) {
       super(ReturnStatus.SUCCESS);
       this.entities = entities;
+      this.pageTokenOpt = pageTokenOpt;
     }
 
     @JsonCreator
     private ListEntitiesResult(
         @JsonProperty("returnStatus") @NotNull ReturnStatus returnStatus,
         @JsonProperty("extraInformation") String extraInformation,
-        @JsonProperty("entities") List<PolarisEntityActiveRecord> entities) {
+        @JsonProperty("entities") List<PolarisEntityActiveRecord> entities,
+        @JsonProperty("pageToken") Optional<PageToken> pageTokenOpt) {
       super(returnStatus, extraInformation);
       this.entities = entities;
+      this.pageTokenOpt = pageTokenOpt;
     }
 
     public List<PolarisEntityActiveRecord> getEntities() {
       return entities;
+    }
+
+    public Optional<PageToken> getPageToken() {
+      return pageTokenOpt;
     }
   }
 
@@ -364,7 +385,8 @@ public interface PolarisMetaStoreManager {
       @NotNull PolarisCallContext callCtx,
       @Nullable List<PolarisEntityCore> catalogPath,
       @NotNull PolarisEntityType entityType,
-      @NotNull PolarisEntitySubType entitySubType);
+      @NotNull PolarisEntitySubType entitySubType,
+      @NotNull PageToken pageToken);
 
   /** the return for a generate new entity id */
   class GenerateEntityIdResult extends BaseResult {
@@ -663,6 +685,11 @@ public interface PolarisMetaStoreManager {
 
     // null if not success. Else the list of entities being returned
     private final List<PolarisBaseEntity> entities;
+    private final Optional<PageToken> pageTokenOpt;
+
+    public static EntitiesResult fromPolarisPage(PolarisPage<PolarisBaseEntity> polarisPage) {
+      return new EntitiesResult(polarisPage.data, Optional.ofNullable(polarisPage.pageToken));
+    }
 
     /**
      * Constructor for an error
@@ -675,6 +702,7 @@ public interface PolarisMetaStoreManager {
         @Nullable String extraInformation) {
       super(errorStatus, extraInformation);
       this.entities = null;
+      this.pageTokenOpt = Optional.empty();
     }
 
     /**
@@ -682,22 +710,30 @@ public interface PolarisMetaStoreManager {
      *
      * @param entities list of entities being returned, implies success
      */
-    public EntitiesResult(@NotNull List<PolarisBaseEntity> entities) {
+    public EntitiesResult(
+        @NotNull List<PolarisBaseEntity> entities, @NotNull Optional<PageToken> pageTokenOpt) {
       super(ReturnStatus.SUCCESS);
       this.entities = entities;
+      this.pageTokenOpt = pageTokenOpt;
     }
 
     @JsonCreator
     private EntitiesResult(
         @JsonProperty("returnStatus") @NotNull ReturnStatus returnStatus,
         @JsonProperty("extraInformation") String extraInformation,
-        @JsonProperty("entities") List<PolarisBaseEntity> entities) {
+        @JsonProperty("entities") List<PolarisBaseEntity> entities,
+        @JsonProperty("pageToken") Optional<PageToken> pageTokenOpt) {
       super(returnStatus, extraInformation);
       this.entities = entities;
+      this.pageTokenOpt = pageTokenOpt;
     }
 
     public List<PolarisBaseEntity> getEntities() {
       return entities;
+    }
+
+    public Optional<PageToken> getPageToken() {
+      return pageTokenOpt;
     }
   }
 
@@ -1199,7 +1235,8 @@ public interface PolarisMetaStoreManager {
    * @return list of tasks to be completed
    */
   @NotNull
-  EntitiesResult loadTasks(@NotNull PolarisCallContext callCtx, String executorId, int limit);
+  EntitiesResult loadTasks(
+      @NotNull PolarisCallContext callCtx, String executorId, PageToken pageToken);
 
   /** Result of a getSubscopedCredsForEntity() call */
   class ScopedCredentialsResult extends BaseResult {

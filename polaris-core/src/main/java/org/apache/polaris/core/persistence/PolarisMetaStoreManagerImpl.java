@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicates;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -30,10 +31,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.polaris.core.PolarisCallContext;
+import org.apache.polaris.core.catalog.pagination.PageToken;
+import org.apache.polaris.core.catalog.pagination.PolarisPage;
 import org.apache.polaris.core.entity.AsyncTaskType;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisChangeTrackingVersions;
@@ -778,37 +782,41 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
   }
 
   /**
-   * See {@link #listEntities(PolarisCallContext, List, PolarisEntityType, PolarisEntitySubType)}
+   * See {@link #listEntities(PolarisCallContext, List, PolarisEntityType, PolarisEntitySubType,
+   * PageToken)}
    */
   private @NotNull ListEntitiesResult listEntities(
       @NotNull PolarisCallContext callCtx,
       @NotNull PolarisMetaStoreSession ms,
       @Nullable List<PolarisEntityCore> catalogPath,
       @NotNull PolarisEntityType entityType,
-      @NotNull PolarisEntitySubType entitySubType) {
+      @NotNull PolarisEntitySubType entitySubType,
+      @NotNull PageToken pageToken) {
     // first resolve again the catalogPath to that entity
     PolarisEntityResolver resolver = new PolarisEntityResolver(callCtx, ms, catalogPath);
 
     // return if we failed to resolve
     if (resolver.isFailure()) {
-      return new ListEntitiesResult(ReturnStatus.CATALOG_PATH_CANNOT_BE_RESOLVED, null);
+      return new ListEntitiesResult(
+          ReturnStatus.CATALOG_PATH_CANNOT_BE_RESOLVED, null, Optional.empty());
     }
 
     // return list of active entities
-    List<PolarisEntityActiveRecord> toreturnList =
+    PolarisPage<PolarisEntityActiveRecord> resultPage =
         ms.listActiveEntities(
-            callCtx, resolver.getCatalogIdOrNull(), resolver.getParentId(), entityType);
+            callCtx, resolver.getCatalogIdOrNull(), resolver.getParentId(), entityType, pageToken);
 
     // prune the returned list with only entities matching the entity subtype
     if (entitySubType != PolarisEntitySubType.ANY_SUBTYPE) {
-      toreturnList =
-          toreturnList.stream()
-              .filter(rec -> rec.getSubTypeCode() == entitySubType.getCode())
-              .collect(Collectors.toList());
+      resultPage =
+          pageToken.buildNextPage(
+              resultPage.data.stream()
+                  .filter(rec -> rec.getSubTypeCode() == entitySubType.getCode())
+                  .collect(Collectors.toList()));
     }
 
     // done
-    return new ListEntitiesResult(toreturnList);
+    return ListEntitiesResult.fromPolarisPage(resultPage);
   }
 
   /** {@inheritDoc} */
@@ -817,13 +825,15 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
       @NotNull PolarisCallContext callCtx,
       @Nullable List<PolarisEntityCore> catalogPath,
       @NotNull PolarisEntityType entityType,
-      @NotNull PolarisEntitySubType entitySubType) {
+      @NotNull PolarisEntitySubType entitySubType,
+      @NotNull PageToken pageToken) {
     // get meta store we should be using
     PolarisMetaStoreSession ms = callCtx.getMetaStore();
 
     // run operation in a read transaction
     return ms.runInReadTransaction(
-        callCtx, () -> listEntities(callCtx, ms, catalogPath, entityType, entitySubType));
+        callCtx,
+        () -> listEntities(callCtx, ms, catalogPath, entityType, entitySubType, pageToken));
   }
 
   /** {@inheritDoc} */
@@ -1197,7 +1207,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
             }
             createdEntities.add(entityCreateResult.getEntity());
           }
-          return new EntitiesResult(createdEntities);
+          return new EntitiesResult(createdEntities, Optional.empty());
         });
   }
 
@@ -1286,7 +1296,7 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
     }
 
     // good, all success
-    return new EntitiesResult(updatedEntities);
+    return new EntitiesResult(updatedEntities, Optional.empty());
   }
 
   /** {@inheritDoc} */
@@ -1477,13 +1487,14 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
       // get the list of catalog roles, at most 2
       List<PolarisBaseEntity> catalogRoles =
           ms.listActiveEntities(
-              callCtx,
-              catalogId,
-              catalogId,
-              PolarisEntityType.CATALOG_ROLE,
-              2,
-              entity -> true,
-              Function.identity());
+                  callCtx,
+                  catalogId,
+                  catalogId,
+                  PolarisEntityType.CATALOG_ROLE,
+                  ms.pageTokenBuilder().fromLimit(2),
+                  Predicates.alwaysTrue(),
+                  Function.identity())
+              .data;
 
       // if we have 2, we cannot drop the catalog. If only one left, better be the admin role
       if (catalogRoles.size() > 1) {
@@ -2008,38 +2019,39 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
         callCtx, () -> this.loadEntity(callCtx, ms, entityCatalogId, entityId));
   }
 
-  /** Refer to {@link #loadTasks(PolarisCallContext, String, int)} */
+  /** Refer to {@link #loadTasks(PolarisCallContext, String, PageToken)} */
   private @NotNull EntitiesResult loadTasks(
       @NotNull PolarisCallContext callCtx,
       @NotNull PolarisMetaStoreSession ms,
       String executorId,
-      int limit) {
+      PageToken pageToken) {
+
+    long taskAgeTimeout =
+        callCtx
+            .getConfigurationStore()
+            .getConfiguration(
+                callCtx,
+                PolarisTaskConstants.TASK_TIMEOUT_MILLIS_CONFIG,
+                PolarisTaskConstants.TASK_TIMEOUT_MILLIS);
 
     // find all available tasks
-    List<PolarisBaseEntity> availableTasks =
+    PolarisPage<PolarisBaseEntity> availableTasks =
         ms.listActiveEntities(
             callCtx,
             PolarisEntityConstants.getRootEntityId(),
             PolarisEntityConstants.getRootEntityId(),
             PolarisEntityType.TASK,
-            limit,
+            pageToken,
             entity -> {
               PolarisObjectMapperUtil.TaskExecutionState taskState =
                   PolarisObjectMapperUtil.parseTaskState(entity);
-              long taskAgeTimeout =
-                  callCtx
-                      .getConfigurationStore()
-                      .getConfiguration(
-                          callCtx,
-                          PolarisTaskConstants.TASK_TIMEOUT_MILLIS_CONFIG,
-                          PolarisTaskConstants.TASK_TIMEOUT_MILLIS);
               return taskState == null
                   || taskState.executor == null
                   || callCtx.getClock().millis() - taskState.lastAttemptStartTime > taskAgeTimeout;
             },
             Function.identity());
 
-    availableTasks.forEach(
+    availableTasks.data.forEach(
         task -> {
           Map<String, String> properties =
               PolarisObjectMapperUtil.deserializeProperties(callCtx, task.getProperties());
@@ -2056,14 +2068,14 @@ public class PolarisMetaStoreManagerImpl implements PolarisMetaStoreManager {
           task.setProperties(PolarisObjectMapperUtil.serializeProperties(callCtx, properties));
           writeEntity(callCtx, ms, task, false);
         });
-    return new EntitiesResult(availableTasks);
+    return EntitiesResult.fromPolarisPage(availableTasks);
   }
 
   @Override
   public @NotNull EntitiesResult loadTasks(
-      @NotNull PolarisCallContext callCtx, String executorId, int limit) {
+      @NotNull PolarisCallContext callCtx, String executorId, PageToken pageToken) {
     PolarisMetaStoreSession ms = callCtx.getMetaStore();
-    return ms.runInTransaction(callCtx, () -> this.loadTasks(callCtx, ms, executorId, limit));
+    return ms.runInTransaction(callCtx, () -> this.loadTasks(callCtx, ms, executorId, pageToken));
   }
 
   /** {@inheritDoc} */

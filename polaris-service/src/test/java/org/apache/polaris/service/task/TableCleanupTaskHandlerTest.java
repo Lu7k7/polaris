@@ -32,6 +32,7 @@ import org.apache.iceberg.inmemory.InMemoryFileIO;
 import org.apache.iceberg.io.FileIO;
 import org.apache.polaris.core.PolarisCallContext;
 import org.apache.polaris.core.PolarisDefaultDiagServiceImpl;
+import org.apache.polaris.core.catalog.pagination.OffsetPageToken;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.AsyncTaskType;
@@ -97,7 +98,7 @@ class TableCleanupTaskHandlerTest {
       assertThat(
               metaStoreManagerFactory
                   .getOrCreateMetaStoreManager(realmContext)
-                  .loadTasks(polarisCallContext, "test", 1)
+                  .loadTasks(polarisCallContext, "test", OffsetPageToken.builder().fromLimit(1))
                   .getEntities())
           .hasSize(1)
           .satisfiesExactly(
@@ -169,7 +170,7 @@ class TableCleanupTaskHandlerTest {
       assertThat(
               metaStoreManagerFactory
                   .getOrCreateMetaStoreManager(realmContext)
-                  .loadTasks(polarisCallContext, "test", 5)
+                  .loadTasks(polarisCallContext, "test", OffsetPageToken.builder().fromLimit(5))
                   .getEntities())
           .hasSize(1);
     }
@@ -236,7 +237,7 @@ class TableCleanupTaskHandlerTest {
       assertThat(
               metaStoreManagerFactory
                   .getOrCreateMetaStoreManager(realmContext)
-                  .loadTasks(polarisCallContext, "test", 5)
+                  .loadTasks(polarisCallContext, "test", OffsetPageToken.builder().fromLimit(5))
                   .getEntities())
           .hasSize(2)
           .satisfiesExactly(
@@ -323,7 +324,7 @@ class TableCleanupTaskHandlerTest {
       assertThat(
               metaStoreManagerFactory
                   .getOrCreateMetaStoreManager(realmContext)
-                  .loadTasks(polarisCallContext, "test", 5)
+                  .loadTasks(polarisCallContext, "test", OffsetPageToken.builder().fromLimit(5))
                   .getEntities())
           // all three manifests should be present, even though one is excluded from the latest
           // snapshot
