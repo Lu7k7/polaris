@@ -18,83 +18,37 @@
  */
 package org.apache.polaris.service.tracing;
 
-import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Context;
-import io.opentelemetry.context.Scope;
-import io.opentelemetry.semconv.HttpAttributes;
-import io.opentelemetry.semconv.ServerAttributes;
-import io.opentelemetry.semconv.UrlAttributes;
-import jakarta.annotation.Priority;
-import jakarta.servlet.Filter;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.ws.rs.Priorities;
-import java.io.IOException;
-import org.apache.polaris.core.context.CallContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
+import io.quarkus.vertx.web.RouteFilter;
+import io.vertx.ext.web.RoutingContext;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.apache.polaris.service.logging.LoggingMDCFilter;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-/**
- * Servlet {@link Filter} that starts an OpenTracing {@link Span}, propagating the calling context
- * from HTTP headers, if present. "spanId" and "traceId" are added to the logging MDC so that all
- * logs recorded in the request will contain the current span and trace id. Downstream HTTP calls
- * should use the OpenTelemetry {@link io.opentelemetry.context.propagation.ContextPropagators} to
- * include the current trace id in the request headers.
- */
-@Priority(Priorities.AUTHENTICATION - 1)
-public class TracingFilter implements Filter {
-  private static final Logger LOGGER = LoggerFactory.getLogger(TracingFilter.class);
-  private final OpenTelemetry openTelemetry;
+@ApplicationScoped
+public class TracingFilter {
 
-  public TracingFilter(OpenTelemetry openTelemetry) {
-    this.openTelemetry = openTelemetry;
-  }
+  public static final String REQUEST_ID_ATTRIBUTE = "polaris.request.id";
+  public static final String REALM_ID_ATTRIBUTE = "polaris.realm";
 
-  @Override
-  public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-      throws IOException, ServletException {
-    HttpServletRequest httpRequest = (HttpServletRequest) request;
-    Context extractedContext =
-        openTelemetry
-            .getPropagators()
-            .getTextMapPropagator()
-            .extract(Context.current(), httpRequest, new HeadersMapAccessor());
-    try (Scope scope = extractedContext.makeCurrent()) {
-      Tracer tracer = openTelemetry.getTracer(httpRequest.getPathInfo());
-      Span span =
-          tracer
-              .spanBuilder(httpRequest.getMethod() + " " + httpRequest.getPathInfo())
-              .setSpanKind(SpanKind.SERVER)
-              .setAttribute(
-                  "realm", CallContext.getCurrentContext().getRealmContext().getRealmIdentifier())
-              .startSpan();
+  @ConfigProperty(name = "quarkus.otel.sdk.disabled")
+  boolean sdkDisabled;
 
-      try (Scope ignored = span.makeCurrent();
-          MDC.MDCCloseable spanId = MDC.putCloseable("spanId", span.getSpanContext().getSpanId());
-          MDC.MDCCloseable traceId =
-              MDC.putCloseable("traceId", span.getSpanContext().getTraceId())) {
-        LOGGER
-            .atInfo()
-            .addKeyValue("spanId", span.getSpanContext().getSpanId())
-            .addKeyValue("traceId", span.getSpanContext().getTraceId())
-            .addKeyValue("parentContext", extractedContext)
-            .log("Started span with parent");
-        span.setAttribute(HttpAttributes.HTTP_REQUEST_METHOD, httpRequest.getMethod());
-        span.setAttribute(ServerAttributes.SERVER_ADDRESS, httpRequest.getServerName());
-        span.setAttribute(UrlAttributes.URL_SCHEME, httpRequest.getScheme());
-        span.setAttribute(UrlAttributes.URL_PATH, httpRequest.getPathInfo());
+  @Inject TelemetryConfiguration telemetryConfiguration;
 
-        chain.doFilter(request, response);
-      } finally {
-        span.end();
+  @RouteFilter(LoggingMDCFilter.PRIORITY - 1)
+  public void applySpanAttributes(RoutingContext rc) {
+    if (!sdkDisabled) {
+      Span span = Span.current();
+      telemetryConfiguration.spanAttributes().forEach(span::setAttribute);
+      String requestId = LoggingMDCFilter.requestId(rc);
+      String realmId = LoggingMDCFilter.realmId(rc);
+      if (requestId != null) {
+        span.setAttribute(REQUEST_ID_ATTRIBUTE, requestId);
       }
+      span.setAttribute(REALM_ID_ATTRIBUTE, realmId);
     }
+    rc.next();
   }
 }

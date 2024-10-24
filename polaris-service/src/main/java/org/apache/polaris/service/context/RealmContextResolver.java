@@ -18,14 +18,12 @@
  */
 package org.apache.polaris.service.context;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.dropwizard.jackson.Discoverable;
+import io.vertx.core.http.HttpServerRequest;
+import java.util.HashMap;
 import java.util.Map;
 import org.apache.polaris.core.context.RealmContext;
-import org.apache.polaris.service.config.HasMetaStoreManagerFactory;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-public interface RealmContextResolver extends Discoverable, HasMetaStoreManagerFactory {
+public interface RealmContextResolver {
 
   RealmContext resolveRealmContext(
       String requestURL,
@@ -34,7 +32,16 @@ public interface RealmContextResolver extends Discoverable, HasMetaStoreManagerF
       Map<String, String> queryParams,
       Map<String, String> headers);
 
-  void setDefaultRealm(String defaultRealm);
+  default RealmContext resolveRealmContext(HttpServerRequest request) {
+    return resolveRealmContext(
+        request.absoluteURI(),
+        request.method().name(),
+        request.path(),
+        request.params().entries().stream()
+            .collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll),
+        request.headers().entries().stream()
+            .collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll));
+  }
 
   String getDefaultRealm();
 }

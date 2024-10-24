@@ -24,6 +24,7 @@ plugins {
   id("polaris-client")
   id("java-library")
   id("java-test-fixtures")
+  id("org.kordamp.gradle.jandex") version "2.1.0"
 }
 
 dependencies {
@@ -98,16 +99,16 @@ dependencies {
   implementation("io.micrometer:micrometer-core")
 
   testFixturesApi(platform(libs.junit.bom))
-  testFixturesApi("org.junit.jupiter:junit-jupiter")
-  testFixturesApi(libs.assertj.core)
-  testFixturesApi(libs.mockito.core)
+  testFixturesApi(libs.bundles.junit.testing)
+  testFixturesApi(platform(libs.jackson.bom))
   testFixturesApi("com.fasterxml.jackson.core:jackson-core")
   testFixturesApi("com.fasterxml.jackson.core:jackson-databind")
+  testFixturesApi(libs.jakarta.annotation.api)
   testFixturesApi(libs.commons.lang3)
   testFixturesApi(libs.threeten.extra)
-  testFixturesApi(platform(libs.jackson.bom))
+
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-  testFixturesApi(libs.jakarta.annotation.api)
 
   compileOnly(libs.jakarta.annotation.api)
   compileOnly(libs.jakarta.persistence.api)
@@ -146,3 +147,5 @@ listOf("sourcesJar", "compileJava").forEach { task ->
 sourceSets {
   main { java { srcDir(project.layout.buildDirectory.dir("generated/src/main/java")) } }
 }
+
+tasks.named("javadoc") { dependsOn("jandex") }

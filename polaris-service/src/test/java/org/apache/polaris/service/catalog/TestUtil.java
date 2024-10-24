@@ -18,14 +18,13 @@
  */
 package org.apache.polaris.service.catalog;
 
-import static org.apache.polaris.service.context.DefaultContextResolver.REALM_PROPERTY_KEY;
+import static org.apache.polaris.service.context.DefaultRealmContextResolver.REALM_PROPERTY_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableMap;
-import io.dropwizard.testing.junit5.DropwizardAppExtension;
-import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
+import java.net.URI;
 import java.util.Map;
 import org.apache.iceberg.CatalogProperties;
 import org.apache.iceberg.catalog.SessionCatalog;
@@ -38,50 +37,45 @@ import org.apache.polaris.core.admin.model.CatalogPrivilege;
 import org.apache.polaris.core.admin.model.CatalogRole;
 import org.apache.polaris.core.admin.model.GrantResource;
 import org.apache.polaris.service.auth.BasePolarisAuthenticator;
-import org.apache.polaris.service.config.PolarisApplicationConfig;
-import org.apache.polaris.service.test.PolarisConnectionExtension;
-import org.apache.polaris.service.test.SnowmanCredentialsExtension;
+import org.apache.polaris.service.test.PolarisIntegrationTestFixture;
+import org.apache.polaris.service.test.TestEnvironment;
 
 /** Test utilities for catalog tests */
 public class TestUtil {
-  /** Performs createSnowmanManagedCatalog() on a Dropwizard instance of Polaris */
-  public static RESTCatalog createSnowmanManagedCatalog(
-      DropwizardAppExtension<PolarisApplicationConfig> EXT,
-      PolarisConnectionExtension.PolarisToken adminToken,
-      SnowmanCredentialsExtension.SnowmanCredentials snowmanCredentials,
-      String realm,
-      Catalog catalog,
-      Map<String, String> extraProperties) {
-    return createSnowmanManagedCatalog(
-        EXT.client(),
-        String.format("http://localhost:%d", EXT.getLocalPort()),
-        adminToken,
-        snowmanCredentials,
-        realm,
-        catalog,
-        extraProperties);
-  }
 
   /**
-   * Creates a catalog and grants the snowman principal from SnowmanCredentialsExtension permission
-   * to manage it.
+   * Creates a catalog and grants the snowman principal permission to manage it.
    *
    * @return A client to interact with the catalog.
    */
   public static RESTCatalog createSnowmanManagedCatalog(
-      Client client,
-      String baseUrl,
-      PolarisConnectionExtension.PolarisToken adminToken,
-      SnowmanCredentialsExtension.SnowmanCredentials snowmanCredentials,
+      TestEnvironment testEnv,
+      PolarisIntegrationTestFixture fixture,
+      Catalog catalog,
+      Map<String, String> extraProperties) {
+    return createSnowmanManagedCatalog(
+        testEnv, fixture, testEnv.baseUri(), fixture.realm, catalog, extraProperties);
+  }
+
+  /**
+   * Creates a catalog and grants the snowman principal permission to manage it.
+   *
+   * @return A client to interact with the catalog.
+   */
+  public static RESTCatalog createSnowmanManagedCatalog(
+      TestEnvironment testEnv,
+      PolarisIntegrationTestFixture fixture,
+      URI baseUri,
       String realm,
       Catalog catalog,
       Map<String, String> extraProperties) {
     String currentCatalogName = catalog.getName();
     try (Response response =
-        client
-            .target(String.format("%s/api/management/v1/catalogs", baseUrl))
+        fixture
+            .client
+            .target(String.format("%s/api/management/v1/catalogs", baseUri))
             .request("application/json")
-            .header("Authorization", "Bearer " + adminToken.token())
+            .header("Authorization", "Bearer " + fixture.adminToken)
             .header(REALM_PROPERTY_KEY, realm)
             .post(Entity.json(catalog))) {
       assertThat(response).returns(Response.Status.CREATED.getStatusCode(), Response::getStatus);
@@ -90,12 +84,13 @@ public class TestUtil {
     // Create a new CatalogRole that has CATALOG_MANAGE_CONTENT and CATALOG_MANAGE_ACCESS
     CatalogRole newRole = new CatalogRole("custom-admin");
     try (Response response =
-        client
+        fixture
+            .client
             .target(
                 String.format(
-                    "%s/api/management/v1/catalogs/%s/catalog-roles", baseUrl, currentCatalogName))
+                    "%s/api/management/v1/catalogs/%s/catalog-roles", baseUri, currentCatalogName))
             .request("application/json")
-            .header("Authorization", "Bearer " + adminToken.token())
+            .header("Authorization", "Bearer " + fixture.adminToken)
             .header(REALM_PROPERTY_KEY, realm)
             .post(Entity.json(newRole))) {
       assertThat(response).returns(Response.Status.CREATED.getStatusCode(), Response::getStatus);
@@ -103,13 +98,14 @@ public class TestUtil {
     CatalogGrant grantResource =
         new CatalogGrant(CatalogPrivilege.CATALOG_MANAGE_CONTENT, GrantResource.TypeEnum.CATALOG);
     try (Response response =
-        client
+        fixture
+            .client
             .target(
                 String.format(
                     "%s/api/management/v1/catalogs/%s/catalog-roles/custom-admin/grants",
-                    baseUrl, currentCatalogName))
+                    baseUri, currentCatalogName))
             .request("application/json")
-            .header("Authorization", "Bearer " + adminToken.token())
+            .header("Authorization", "Bearer " + fixture.adminToken)
             .header(REALM_PROPERTY_KEY, realm)
             .put(Entity.json(grantResource))) {
       assertThat(response).returns(Response.Status.CREATED.getStatusCode(), Response::getStatus);
@@ -117,13 +113,14 @@ public class TestUtil {
     CatalogGrant grantAccessResource =
         new CatalogGrant(CatalogPrivilege.CATALOG_MANAGE_ACCESS, GrantResource.TypeEnum.CATALOG);
     try (Response response =
-        client
+        fixture
+            .client
             .target(
                 String.format(
                     "%s/api/management/v1/catalogs/%s/catalog-roles/custom-admin/grants",
-                    baseUrl, currentCatalogName))
+                    baseUri, currentCatalogName))
             .request("application/json")
-            .header("Authorization", "Bearer " + adminToken.token())
+            .header("Authorization", "Bearer " + fixture.adminToken)
             .header(REALM_PROPERTY_KEY, realm)
             .put(Entity.json(grantAccessResource))) {
       assertThat(response).returns(Response.Status.CREATED.getStatusCode(), Response::getStatus);
@@ -131,27 +128,29 @@ public class TestUtil {
 
     // Assign this new CatalogRole to the service_admin PrincipalRole
     try (Response response =
-        client
+        fixture
+            .client
             .target(
                 String.format(
                     "%s/api/management/v1/catalogs/%s/catalog-roles/custom-admin",
-                    baseUrl, currentCatalogName))
+                    baseUri, currentCatalogName))
             .request("application/json")
-            .header("Authorization", "Bearer " + adminToken.token())
+            .header("Authorization", "Bearer " + fixture.adminToken)
             .header(REALM_PROPERTY_KEY, realm)
             .get()) {
       assertThat(response).returns(Response.Status.OK.getStatusCode(), Response::getStatus);
       CatalogRole catalogRole = response.readEntity(CatalogRole.class);
       try (Response assignResponse =
-          client
+          fixture
+              .client
               .target(
                   String.format(
                       "%s/api/management/v1/principal-roles/%s/catalog-roles/%s",
-                      baseUrl,
-                      snowmanCredentials.identifier().principalRoleName(),
+                      baseUri,
+                      fixture.snowmanCredentials.identifier().principalRoleName(),
                       currentCatalogName))
               .request("application/json")
-              .header("Authorization", "Bearer " + adminToken.token())
+              .header("Authorization", "Bearer " + fixture.adminToken)
               .header(REALM_PROPERTY_KEY, realm)
               .put(Entity.json(catalogRole))) {
         assertThat(assignResponse)
@@ -167,10 +166,12 @@ public class TestUtil {
 
     ImmutableMap.Builder<String, String> propertiesBuilder =
         ImmutableMap.<String, String>builder()
-            .put(CatalogProperties.URI, baseUrl + "/api/catalog")
+            .put(CatalogProperties.URI, baseUri + "/api/catalog")
             .put(
                 OAuth2Properties.CREDENTIAL,
-                snowmanCredentials.clientId() + ":" + snowmanCredentials.clientSecret())
+                fixture.snowmanCredentials.clientId()
+                    + ":"
+                    + fixture.snowmanCredentials.clientSecret())
             .put(OAuth2Properties.SCOPE, BasePolarisAuthenticator.PRINCIPAL_ROLE_ALL)
             .put(CatalogProperties.FILE_IO_IMPL, "org.apache.iceberg.inmemory.InMemoryFileIO")
             .put("warehouse", currentCatalogName)
