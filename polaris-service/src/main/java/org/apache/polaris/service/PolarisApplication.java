@@ -208,12 +208,15 @@ public class PolarisApplication extends Application<PolarisApplicationConfig> {
       csAware.setConfigurationStore(configurationStore);
     }
 
-    Boolean skipCredentialSubscopingIndirection = configurationStore.getConfiguration(null, PolarisConfiguration.SKIP_CREDENTIAL_SUBSCOPING_INDIRECTION.key);
+    Boolean skipCredentialSubscopingIndirection =
+        configurationStore.getConfiguration(
+            null, PolarisConfiguration.SKIP_CREDENTIAL_SUBSCOPING_INDIRECTION.key);
     TaskHandlerConfiguration taskConfig = configuration.getTaskHandler();
     TaskExecutorImpl taskExecutor =
         new TaskExecutorImpl(taskConfig.executorService(), metaStoreManagerFactory);
     TaskFileIOSupplier fileIOSupplier =
-        new TaskFileIOSupplier(metaStoreManagerFactory, fileIOFactory, skipCredentialSubscopingIndirection);
+        new TaskFileIOSupplier(
+            metaStoreManagerFactory, fileIOFactory, skipCredentialSubscopingIndirection);
     taskExecutor.addTaskHandler(
         new TableCleanupTaskHandler(taskExecutor, metaStoreManagerFactory, fileIOSupplier));
     taskExecutor.addTaskHandler(
