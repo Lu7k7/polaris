@@ -18,6 +18,7 @@
  */
 package org.apache.polaris.core.persistence;
 
+import jakarta.inject.Inject;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +34,6 @@ import org.apache.polaris.core.entity.PolarisEntityConstants;
 import org.apache.polaris.core.entity.PolarisEntitySubType;
 import org.apache.polaris.core.entity.PolarisEntityType;
 import org.apache.polaris.core.entity.PolarisPrincipalSecrets;
-import org.apache.polaris.core.monitor.PolarisMetricRegistry;
 import org.apache.polaris.core.storage.PolarisStorageIntegrationProvider;
 import org.apache.polaris.core.storage.cache.StorageCredentialCache;
 import org.jetbrains.annotations.NotNull;
@@ -157,12 +157,7 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
     return storageCredentialCacheMap.get(realmContext.getRealmIdentifier());
   }
 
-  @Override
-  public void setMetricRegistry(PolarisMetricRegistry metricRegistry) {
-    // no-op
-  }
-
-  @Override
+  @Inject
   public void setStorageIntegrationProvider(PolarisStorageIntegrationProvider storageIntegration) {
     this.storageIntegration = storageIntegration;
   }
