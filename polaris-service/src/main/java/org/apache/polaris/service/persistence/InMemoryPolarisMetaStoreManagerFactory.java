@@ -21,9 +21,13 @@ package org.apache.polaris.service.persistence;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
+
+import org.apache.polaris.core.PolarisCallContext;
+import org.apache.polaris.core.PolarisConfiguration;
 import org.apache.polaris.core.PolarisDiagnostics;
 import org.apache.polaris.core.auth.PolarisSecretsManager.PrincipalSecretsResult;
 import org.apache.polaris.core.context.RealmContext;
@@ -55,7 +59,7 @@ public class InMemoryPolarisMetaStoreManagerFactory
       RealmContext realmContext) {
     String realmId = realmContext.getRealmIdentifier();
     if (!bootstrappedRealms.contains(realmId)) {
-      bootstrapRealmAndPrintCredentials(realmId);
+      bootstrapRealms(List.of(realmId));
     }
     return super.getOrCreateMetaStoreManager(realmContext);
   }
@@ -65,24 +69,14 @@ public class InMemoryPolarisMetaStoreManagerFactory
       RealmContext realmContext) {
     String realmId = realmContext.getRealmIdentifier();
     if (!bootstrappedRealms.contains(realmId)) {
-      bootstrapRealmAndPrintCredentials(realmId);
+      bootstrapRealms(List.of(realmId));
     }
     return super.getOrCreateSessionSupplier(realmContext);
   }
 
-  private void bootstrapRealmAndPrintCredentials(String realmId) {
-    Map<String, PrincipalSecretsResult> results =
-        this.bootstrapRealms(Collections.singletonList(realmId));
-    bootstrappedRealms.add(realmId);
-
-    PrincipalSecretsResult principalSecrets = results.get(realmId);
-
-    String msg =
-        String.format(
-            "realm: %1s root principal credentials: %2s:%3s",
-            realmId,
-            principalSecrets.getPrincipalSecrets().getPrincipalClientId(),
-            principalSecrets.getPrincipalSecrets().getMainSecret());
-    System.out.println(msg);
+  /** {@inheritDoc} */
+  @Override
+  protected boolean printCredentials(PolarisCallContext polarisCallContext) {
+    return true;
   }
 }
