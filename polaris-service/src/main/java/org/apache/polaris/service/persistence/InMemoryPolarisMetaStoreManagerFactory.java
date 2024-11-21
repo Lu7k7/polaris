@@ -19,17 +19,12 @@
 package org.apache.polaris.service.persistence;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
-
 import org.apache.polaris.core.PolarisCallContext;
-import org.apache.polaris.core.PolarisConfiguration;
 import org.apache.polaris.core.PolarisDiagnostics;
-import org.apache.polaris.core.auth.PolarisSecretsManager.PrincipalSecretsResult;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.persistence.LocalPolarisMetaStoreManagerFactory;
 import org.apache.polaris.core.persistence.PolarisMetaStoreManager;

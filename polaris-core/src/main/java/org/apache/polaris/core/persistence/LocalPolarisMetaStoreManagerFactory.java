@@ -77,7 +77,8 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
   }
 
   @Override
-  public final synchronized Map<String, PrincipalSecretsResult> bootstrapRealms(List<String> realms) {
+  public final synchronized Map<String, PrincipalSecretsResult> bootstrapRealms(
+      List<String> realms) {
     Map<String, PrincipalSecretsResult> results = new HashMap<>();
 
     for (String realm : realms) {
@@ -89,10 +90,11 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
         PolarisCallContext polarisContext =
             new PolarisCallContext(
                 sessionSupplierMap.get(realmContext.getRealmIdentifier()).get(), diagServices);
-        PrincipalSecretsResult secretsResult = bootstrapServiceAndCreatePolarisPrincipalForRealm(
-            realmContext,
-            metaStoreManagerMap.get(realmContext.getRealmIdentifier()),
-            polarisContext);
+        PrincipalSecretsResult secretsResult =
+            bootstrapServiceAndCreatePolarisPrincipalForRealm(
+                realmContext,
+                metaStoreManagerMap.get(realmContext.getRealmIdentifier()),
+                polarisContext);
         results.put(realmContext.getRealmIdentifier(), secretsResult);
         if (this.printCredentials(polarisContext)) {
           String msg =
@@ -197,10 +199,12 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
     // TODO rebase onto #422, call a method like PrincipalSecretsGenerator.hasEnvironmentVariables
     boolean environmentVariableCredentials = false;
     if (!this.printCredentials(polarisContext) && !environmentVariableCredentials) {
-      String failureMessage = String.format(
-          "It appears that environment variables were not provided for root credentials, and that printing " +
-              "the root credentials is disabled via %s. If bootstrapping were to proceed, there would be no way " +
-              "to recover the root credentials", PolarisConfiguration.BOOTSTRAP_PRINT_CREDENTIALS.key);
+      String failureMessage =
+          String.format(
+              "It appears that environment variables were not provided for root credentials, and that printing "
+                  + "the root credentials is disabled via %s. If bootstrapping were to proceed, there would be no way "
+                  + "to recover the root credentials",
+              PolarisConfiguration.BOOTSTRAP_PRINT_CREDENTIALS.key);
       LOGGER.error("\n\n {} \n\n", failureMessage);
       throw new IllegalArgumentException(failureMessage);
     }
@@ -263,13 +267,10 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
     }
   }
 
-  /**
-   * Whether or not to print credentials after bootstrapping
-   */
+  /** Whether or not to print credentials after bootstrapping */
   protected boolean printCredentials(PolarisCallContext polarisCallContext) {
     return polarisCallContext
         .getConfigurationStore()
-        .getConfiguration(
-            polarisCallContext, PolarisConfiguration.BOOTSTRAP_PRINT_CREDENTIALS);
+        .getConfiguration(polarisCallContext, PolarisConfiguration.BOOTSTRAP_PRINT_CREDENTIALS);
   }
 }
