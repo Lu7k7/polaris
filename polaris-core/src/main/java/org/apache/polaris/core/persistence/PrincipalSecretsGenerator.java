@@ -67,7 +67,10 @@ public interface PrincipalSecretsGenerator {
     return bootstrap(realmName, PrincipalSecretsGenerator::getEnvironmentVariable);
   }
 
-  /** Return a {@link PrincipalSecretsGenerator} either randomly-generated or from environment variables */
+  /**
+   * Return a {@link PrincipalSecretsGenerator} either randomly-generated or from environment
+   * variables
+   */
   static PrincipalSecretsGenerator bootstrap(String realmName, Function<String, String> config) {
     return (principalName, principalId) -> {
       String propId = clientIdEnvironmentVariable(realmName, principalName);
@@ -89,7 +92,8 @@ public interface PrincipalSecretsGenerator {
     Map<String, String> environmentVariables = System.getenv();
     String clientIdKey = clientIdEnvironmentVariable(realmName, principalName);
     String clientSecretKey = clientSecretEnvironmentVariable(realmName, principalName);
-    return environmentVariables.containsKey(clientIdKey) && environmentVariables.containsKey(clientSecretKey);
+    return environmentVariables.containsKey(clientIdKey)
+        && environmentVariables.containsKey(clientSecretKey);
   }
 
   /** Load a single environment variable */

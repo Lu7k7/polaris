@@ -93,32 +93,32 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
 
     bootstrap = true;
     try {
-    for (String realm : realms) {
-      RealmContext realmContext = () -> realm;
-      if (!metaStoreManagerMap.containsKey(realmContext.getRealmIdentifier())) {
-        initializeForRealm(realmContext);
-        // While bootstrapping we need to act as a fake privileged context since the real
-        // CallContext hasn't even been resolved yet.
-        PolarisCallContext polarisContext =
-            new PolarisCallContext(
-                sessionSupplierMap.get(realmContext.getRealmIdentifier()).get(), diagServices);
-        PrincipalSecretsResult secretsResult =
-            bootstrapServiceAndCreatePolarisPrincipalForRealm(
-                realmContext,
-                metaStoreManagerMap.get(realmContext.getRealmIdentifier()),
-                polarisContext);
-        results.put(realmContext.getRealmIdentifier(), secretsResult);
-        if (this.printCredentials(polarisContext)) {
-          String msg =
-              String.format(
-                  "realm: %1s root principal credentials: %2s:%3s",
-                  realmContext.getRealmIdentifier(),
-                  secretsResult.getPrincipalSecrets().getPrincipalClientId(),
-                  secretsResult.getPrincipalSecrets().getMainSecret());
-          System.out.println(msg);
+      for (String realm : realms) {
+        RealmContext realmContext = () -> realm;
+        if (!metaStoreManagerMap.containsKey(realmContext.getRealmIdentifier())) {
+          initializeForRealm(realmContext);
+          // While bootstrapping we need to act as a fake privileged context since the real
+          // CallContext hasn't even been resolved yet.
+          PolarisCallContext polarisContext =
+              new PolarisCallContext(
+                  sessionSupplierMap.get(realmContext.getRealmIdentifier()).get(), diagServices);
+          PrincipalSecretsResult secretsResult =
+              bootstrapServiceAndCreatePolarisPrincipalForRealm(
+                  realmContext,
+                  metaStoreManagerMap.get(realmContext.getRealmIdentifier()),
+                  polarisContext);
+          results.put(realmContext.getRealmIdentifier(), secretsResult);
+          if (this.printCredentials(polarisContext)) {
+            String msg =
+                String.format(
+                    "realm: %1s root principal credentials: %2s:%3s",
+                    realmContext.getRealmIdentifier(),
+                    secretsResult.getPrincipalSecrets().getPrincipalClientId(),
+                    secretsResult.getPrincipalSecrets().getMainSecret());
+            System.out.println(msg);
+          }
         }
       }
-    }
     } finally {
       bootstrap = false;
     }
@@ -211,9 +211,9 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
       throw new IllegalArgumentException(overrideMessage);
     }
 
-    boolean environmentVariableCredentials = PrincipalSecretsGenerator.hasCredentialVariables(
-        realmContext.getRealmIdentifier(),
-        PolarisEntityConstants.getRootPrincipalName());
+    boolean environmentVariableCredentials =
+        PrincipalSecretsGenerator.hasCredentialVariables(
+            realmContext.getRealmIdentifier(), PolarisEntityConstants.getRootPrincipalName());
     if (!this.printCredentials(polarisContext) && !environmentVariableCredentials) {
       String failureMessage =
           String.format(
