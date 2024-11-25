@@ -60,10 +60,20 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
   private static final Logger LOGGER =
       LoggerFactory.getLogger(LocalPolarisMetaStoreManagerFactory.class);
 
+  private boolean bootstrap;
+
   protected abstract StoreType createBackingStore(@NotNull PolarisDiagnostics diagnostics);
 
   protected abstract PolarisMetaStoreSession createMetaStoreSession(
       @NotNull StoreType store, @NotNull RealmContext realmContext);
+
+  protected PrincipalSecretsGenerator secretsGenerator(RealmContext realmContext) {
+    if (bootstrap) {
+      return PrincipalSecretsGenerator.bootstrap(realmContext.getRealmIdentifier());
+    } else {
+      return PrincipalSecretsGenerator.RANDOM_SECRETS;
+    }
+  }
 
   private void initializeForRealm(RealmContext realmContext) {
     final StoreType backingStore = createBackingStore(diagServices);
@@ -81,6 +91,8 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
       List<String> realms) {
     Map<String, PrincipalSecretsResult> results = new HashMap<>();
 
+    bootstrap = true;
+    try {
     for (String realm : realms) {
       RealmContext realmContext = () -> realm;
       if (!metaStoreManagerMap.containsKey(realmContext.getRealmIdentifier())) {
@@ -106,6 +118,9 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
           System.out.println(msg);
         }
       }
+    }
+    } finally {
+      bootstrap = false;
     }
 
     return results;
@@ -196,8 +211,9 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
       throw new IllegalArgumentException(overrideMessage);
     }
 
-    // TODO rebase onto #422, call a method like PrincipalSecretsGenerator.hasEnvironmentVariables
-    boolean environmentVariableCredentials = false;
+    boolean environmentVariableCredentials = PrincipalSecretsGenerator.hasCredentialVariables(
+        realmContext.getRealmIdentifier(),
+        PolarisEntityConstants.getRootPrincipalName());
     if (!this.printCredentials(polarisContext) && !environmentVariableCredentials) {
       String failureMessage =
           String.format(
