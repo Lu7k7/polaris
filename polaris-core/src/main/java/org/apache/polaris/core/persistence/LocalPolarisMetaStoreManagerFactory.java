@@ -213,8 +213,9 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
       throw new IllegalArgumentException(overrideMessage);
     }
 
-    boolean hasSystemGeneratedSecrets = secretsGenerator(realmContext)
-        .systemGeneratedSecrets(PolarisEntityConstants.getRootPrincipalName());
+    boolean hasSystemGeneratedSecrets =
+        secretsGenerator(realmContext)
+            .systemGeneratedSecrets(PolarisEntityConstants.getRootPrincipalName());
     if (!this.printCredentials(polarisContext) && hasSystemGeneratedSecrets) {
       String failureMessage =
           String.format(

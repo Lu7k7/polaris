@@ -30,8 +30,7 @@ public class EnvVariablePrincipalSecretsGenerator extends PrincipalSecretsGenera
 
   /** {@inheritDoc} */
   @Override
-  public PolarisPrincipalSecrets produceSecrets(
-      @NotNull String principalName, long principalId) {
+  public PolarisPrincipalSecrets produceSecrets(@NotNull String principalName, long principalId) {
     String clientIdKey = clientIdEnvironmentVariable(realmName, principalName);
     String clientSecretKey = clientSecretEnvironmentVariable(realmName, principalName);
 
@@ -46,8 +45,7 @@ public class EnvVariablePrincipalSecretsGenerator extends PrincipalSecretsGenera
 
   /** {@inheritDoc} */
   @Override
-  public boolean systemGeneratedSecrets(
-      @NotNull String principalName) {
+  public boolean systemGeneratedSecrets(@NotNull String principalName) {
     String clientIdKey = clientIdEnvironmentVariable(realmName, principalName);
     String clientSecretKey = clientSecretEnvironmentVariable(realmName, principalName);
     return getEnvironmentVariable(clientIdKey) != null
