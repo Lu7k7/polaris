@@ -66,6 +66,5 @@ public class RealmEntityManagerFactory {
               metaStoreManagerFactory.getOrCreateStorageCredentialCache(context),
               entityCache);
         });
-
   }
 }
