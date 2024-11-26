@@ -35,6 +35,8 @@ import org.apache.polaris.core.entity.PolarisEntitySubType;
 import org.apache.polaris.core.entity.PolarisEntityType;
 import org.apache.polaris.core.entity.PolarisPrincipalSecrets;
 import org.apache.polaris.core.monitor.PolarisMetricRegistry;
+import org.apache.polaris.core.persistence.secrets.PrincipalSecretsGenerator;
+import org.apache.polaris.core.persistence.secrets.RandomPrincipalSecretsGenerator;
 import org.apache.polaris.core.storage.PolarisStorageIntegrationProvider;
 import org.apache.polaris.core.storage.cache.StorageCredentialCache;
 import org.jetbrains.annotations.NotNull;
@@ -71,7 +73,7 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
     if (bootstrap) {
       return PrincipalSecretsGenerator.bootstrap(realmContext.getRealmIdentifier());
     } else {
-      return PrincipalSecretsGenerator.RANDOM_SECRETS;
+      return new RandomPrincipalSecretsGenerator(realmContext.getRealmIdentifier());
     }
   }
 
@@ -211,10 +213,9 @@ public abstract class LocalPolarisMetaStoreManagerFactory<StoreType>
       throw new IllegalArgumentException(overrideMessage);
     }
 
-    boolean environmentVariableCredentials =
-        PrincipalSecretsGenerator.hasCredentialVariables(
-            realmContext.getRealmIdentifier(), PolarisEntityConstants.getRootPrincipalName());
-    if (!this.printCredentials(polarisContext) && !environmentVariableCredentials) {
+    boolean hasSystemGeneratedSecrets = secretsGenerator(realmContext)
+        .systemGeneratedSecrets(PolarisEntityConstants.getRootPrincipalName());
+    if (!this.printCredentials(polarisContext) && hasSystemGeneratedSecrets) {
       String failureMessage =
           String.format(
               "It appears that environment variables were not provided for root credentials, and that printing "

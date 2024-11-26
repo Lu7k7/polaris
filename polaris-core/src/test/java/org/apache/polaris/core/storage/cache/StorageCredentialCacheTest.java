@@ -18,7 +18,7 @@
  */
 package org.apache.polaris.core.storage.cache;
 
-import static org.apache.polaris.core.persistence.PrincipalSecretsGenerator.RANDOM_SECRETS;
+import static org.apache.polaris.core.persistence.secrets.PrincipalSecretsGenerator.RANDOM_SECRETS;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;

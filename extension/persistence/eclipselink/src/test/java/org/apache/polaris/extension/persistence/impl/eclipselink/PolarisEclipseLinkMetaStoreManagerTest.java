@@ -19,7 +19,7 @@
 package org.apache.polaris.extension.persistence.impl.eclipselink;
 
 import static jakarta.persistence.Persistence.createEntityManagerFactory;
-import static org.apache.polaris.core.persistence.PrincipalSecretsGenerator.RANDOM_SECRETS;
+import static org.apache.polaris.core.persistence.secrets.PrincipalSecretsGenerator.RANDOM_SECRETS;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;

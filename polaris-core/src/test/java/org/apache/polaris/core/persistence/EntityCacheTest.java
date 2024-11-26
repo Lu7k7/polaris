@@ -18,7 +18,7 @@
  */
 package org.apache.polaris.core.persistence;
 
-import static org.apache.polaris.core.persistence.PrincipalSecretsGenerator.RANDOM_SECRETS;
+import static org.apache.polaris.core.persistence.secrets.PrincipalSecretsGenerator.RANDOM_SECRETS;
 
 import java.util.List;
 import java.util.stream.Collectors;
