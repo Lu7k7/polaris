@@ -45,6 +45,7 @@ import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableMetadataParser;
+import org.apache.iceberg.TableOperations;
 import org.apache.iceberg.catalog.CatalogTests;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.SupportsNamespaces;
@@ -80,6 +81,7 @@ import org.apache.polaris.core.persistence.MetaStoreManagerFactory;
 import org.apache.polaris.core.persistence.PolarisEntityManager;
 import org.apache.polaris.core.persistence.PolarisMetaStoreManager;
 import org.apache.polaris.core.persistence.PolarisMetaStoreSession;
+import org.apache.polaris.core.persistence.resolver.PolarisResolutionManifestCatalogView;
 import org.apache.polaris.core.storage.PolarisCredentialProperty;
 import org.apache.polaris.core.storage.PolarisStorageIntegration;
 import org.apache.polaris.core.storage.PolarisStorageIntegrationProvider;
@@ -92,6 +94,7 @@ import org.apache.polaris.service.catalog.io.FileIOFactory;
 import org.apache.polaris.service.catalog.io.TestFileIOFactory;
 import org.apache.polaris.service.exception.IcebergExceptionMapper;
 import org.apache.polaris.service.persistence.InMemoryPolarisMetaStoreManagerFactory;
+import org.apache.polaris.service.persistence.MetadataCacheManager;
 import org.apache.polaris.service.task.TableCleanupTaskHandler;
 import org.apache.polaris.service.task.TaskExecutor;
 import org.apache.polaris.service.task.TaskFileIOSupplier;
@@ -132,6 +135,7 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
   private PolarisEntityManager entityManager;
   private AuthenticatedPolarisPrincipal authenticatedRoot;
   private PolarisEntity catalogEntity;
+  private PolarisResolutionManifestCatalogView passthroughView;
 
   @BeforeEach
   @SuppressWarnings("unchecked")
@@ -202,10 +206,11 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
                     PolarisConfiguration.ALLOW_EXTERNAL_TABLE_LOCATION.catalogConfig(), "true")
                 .addProperty(
                     PolarisConfiguration.ALLOW_UNSTRUCTURED_TABLE_LOCATION.catalogConfig(), "true")
+                .addProperty(PolarisConfiguration.METADATA_CACHE_MAX_BYTES.catalogConfig(), "-1")
                 .setStorageConfigurationInfo(storageConfigModel, storageLocation)
                 .build());
 
-    PolarisPassthroughResolutionView passthroughView =
+    passthroughView =
         new PolarisPassthroughResolutionView(
             callContext, entityManager, authenticatedRoot, CATALOG_NAME);
     TaskExecutor taskExecutor = Mockito.mock();
@@ -1522,5 +1527,64 @@ public class BasePolarisCatalogTest extends CatalogTests<BasePolarisCatalog> {
                 .getEntities()
                 .getFirst()));
     Assertions.assertThat(measured.getNumDeletedFiles()).as("A table was deleted").isGreaterThan(0);
+  }
+
+  private Schema buildSchema(int fields) {
+    Types.NestedField[] fieldsArray = new Types.NestedField[fields];
+    for (int i = 0; i < fields; i++) {
+      fieldsArray[i] = Types.NestedField.optional(i, "field_" + i, Types.IntegerType.get());
+    }
+    return new Schema(fieldsArray);
+  }
+
+  @Test
+  public void testMetadataCachingWithManualFallback() {
+    Namespace namespace = Namespace.of("manual-namespace");
+    TableIdentifier tableIdentifier = TableIdentifier.of(namespace, "t1");
+
+    Schema schema = buildSchema(10);
+
+    catalog.createNamespace(namespace);
+    Table createdTable = catalog.createTable(tableIdentifier, schema);
+    TableMetadata originalMetadata = ((BaseTable) createdTable).operations().current();
+
+    TableMetadata cachedMetadata =
+        MetadataCacheManager.loadTableMetadata(
+            tableIdentifier,
+            Integer.MAX_VALUE,
+            polarisContext,
+            metaStoreManager,
+            passthroughView,
+            () -> {
+              throw new IllegalStateException("Fell back even though a cache entry should exist!");
+            });
+
+    // The metadata object is loaded from the cache
+    Assertions.assertThat(cachedMetadata).isNotSameAs(originalMetadata);
+
+    // The content should match what was cached
+    Assertions.assertThat(TableMetadataParser.toJson(cachedMetadata))
+        .isEqualTo(TableMetadataParser.toJson(originalMetadata));
+
+    // Update the table
+    TableOperations tableOps = catalog.newTableOps(tableIdentifier);
+    TableMetadata updatedMetadata = tableOps.current().updateSchema(buildSchema(100), 100);
+    tableOps.commit(tableOps.current(), updatedMetadata);
+
+    // Read from the cache; it should detect a chance due to the update and load the new fallback
+    TableMetadata reloadedMetadata =
+        MetadataCacheManager.loadTableMetadata(
+            tableIdentifier,
+            Integer.MAX_VALUE,
+            polarisContext,
+            metaStoreManager,
+            passthroughView,
+            () -> {
+              throw new IllegalStateException(
+                  "Fell back even though a cache entry should be updated on write");
+            });
+
+    Assertions.assertThat(reloadedMetadata).isNotSameAs(cachedMetadata);
+    Assertions.assertThat(reloadedMetadata.schema().columns().size()).isEqualTo(100);
   }
 }

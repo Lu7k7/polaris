@@ -23,6 +23,8 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
@@ -35,6 +37,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -46,6 +49,7 @@ import org.apache.iceberg.Table;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableMetadataParser;
 import org.apache.iceberg.TableOperations;
+import org.apache.iceberg.TableProperties;
 import org.apache.iceberg.aws.s3.S3FileIOProperties;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.SupportsNamespaces;
@@ -64,7 +68,9 @@ import org.apache.iceberg.exceptions.ValidationException;
 import org.apache.iceberg.io.CloseableGroup;
 import org.apache.iceberg.io.FileIO;
 import org.apache.iceberg.io.InputFile;
+import org.apache.iceberg.io.SupportsBulkOperations;
 import org.apache.iceberg.util.PropertyUtil;
+import org.apache.iceberg.util.Tasks;
 import org.apache.iceberg.view.BaseMetastoreViewCatalog;
 import org.apache.iceberg.view.BaseViewOperations;
 import org.apache.iceberg.view.ViewBuilder;
@@ -103,6 +109,7 @@ import org.apache.polaris.core.storage.StorageLocation;
 import org.apache.polaris.core.storage.aws.PolarisS3FileIOClientFactory;
 import org.apache.polaris.service.catalog.io.FileIOFactory;
 import org.apache.polaris.service.exception.IcebergExceptionMapper;
+import org.apache.polaris.service.persistence.MetadataCacheManager;
 import org.apache.polaris.service.task.TaskExecutor;
 import org.apache.polaris.service.types.NotificationRequest;
 import org.apache.polaris.service.types.NotificationType;
@@ -827,6 +834,34 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
         storageInfo.get());
   }
 
+  public TableMetadata loadTableMetadata(TableIdentifier identifier) {
+    int maxMetadataCacheBytes =
+        callContext
+            .getPolarisCallContext()
+            .getConfigurationStore()
+            .getConfiguration(
+                callContext.getPolarisCallContext(), PolarisConfiguration.METADATA_CACHE_MAX_BYTES);
+    if (maxMetadataCacheBytes == PolarisConfiguration.METADATA_CACHE_MAX_BYTES_NO_CACHING) {
+      return loadTableMetadata(loadTable(identifier));
+    } else {
+      Supplier<TableMetadata> fallback = () -> loadTableMetadata(loadTable(identifier));
+      return MetadataCacheManager.loadTableMetadata(
+          identifier,
+          maxMetadataCacheBytes,
+          callContext.getPolarisCallContext(),
+          metaStoreManager,
+          resolvedEntityView,
+          fallback);
+    }
+  }
+
+  private static TableMetadata loadTableMetadata(Table table) {
+    if (table instanceof BaseTable baseTable) {
+      return baseTable.operations().current();
+    }
+    throw new IllegalArgumentException("Cannot load metadata for " + table.name());
+  }
+
   /**
    * Based on configuration settings, for callsites that need to handle potentially setting a new
    * base location for a TableLike entity, produces the transformed location if applicable, or else
@@ -1349,24 +1384,51 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
       TableLikeEntity entity =
           TableLikeEntity.of(resolvedEntities == null ? null : resolvedEntities.getRawLeafEntity());
       String existingLocation;
+      int maxMetadataCacheBytes =
+          callContext
+              .getPolarisCallContext()
+              .getConfigurationStore()
+              .getConfiguration(
+                  callContext.getPolarisCallContext(),
+                  catalogEntity,
+                  PolarisConfiguration.METADATA_CACHE_MAX_BYTES);
+      Optional<String> metadataJsonOpt = Optional.empty();
+      boolean shouldPersistMetadata =
+          switch (maxMetadataCacheBytes) {
+            case PolarisConfiguration.METADATA_CACHE_MAX_BYTES_NO_CACHING -> false;
+            case PolarisConfiguration.METADATA_CACHE_MAX_BYTES_INFINITE_CACHING -> {
+              metadataJsonOpt = MetadataCacheManager.toBoundedJson(metadata, maxMetadataCacheBytes);
+              yield true;
+            }
+            default -> {
+              metadataJsonOpt = MetadataCacheManager.toBoundedJson(metadata, maxMetadataCacheBytes);
+              yield metadataJsonOpt
+                  .map(String::length)
+                  .map(l -> l <= maxMetadataCacheBytes)
+                  .orElse(false);
+            }
+          };
+      final TableLikeEntity.Builder builder;
       if (null == entity) {
         existingLocation = null;
-        entity =
+        builder =
             new TableLikeEntity.Builder(tableIdentifier, newLocation)
                 .setCatalogId(getCatalogId())
                 .setSubType(PolarisEntitySubType.TABLE)
                 .setBaseLocation(metadata.location())
                 .setId(
-                    getMetaStoreManager().generateNewEntityId(getCurrentPolarisContext()).getId())
-                .build();
+                    getMetaStoreManager().generateNewEntityId(getCurrentPolarisContext()).getId());
       } else {
         existingLocation = entity.getMetadataLocation();
-        entity =
+        builder =
             new TableLikeEntity.Builder(entity)
                 .setBaseLocation(metadata.location())
-                .setMetadataLocation(newLocation)
-                .build();
+                .setMetadataLocation(newLocation);
       }
+      if (shouldPersistMetadata && metadataJsonOpt.isPresent()) {
+        builder.setMetadataContent(newLocation, metadataJsonOpt.get());
+      }
+      entity = builder.build();
       if (!Objects.equal(existingLocation, oldLocation)) {
         if (null == base) {
           throw new AlreadyExistsException("Table already exists: %s", tableName());
@@ -1385,6 +1447,98 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
         createTableLike(tableIdentifier, entity);
       } else {
         updateTableLike(tableIdentifier, entity);
+      }
+    }
+
+    /**
+     * Copied from {@link BaseMetastoreTableOperations} but without the requirement that base ==
+     * current()
+     *
+     * @param base table metadata on which changes were based
+     * @param metadata new table metadata with updates
+     */
+    @Override
+    public void commit(TableMetadata base, TableMetadata metadata) {
+      TableMetadata currentMetadata = current();
+
+      // if the metadata is already out of date, reject it
+      if (base == null) {
+        if (currentMetadata != null) {
+          // when current is non-null, the table exists. but when base is null, the commit is trying
+          // to create the table
+          throw new AlreadyExistsException("Table already exists: %s", tableName());
+        }
+      } else if (base.metadataFileLocation() != null
+          && !base.metadataFileLocation().equals(currentMetadata.metadataFileLocation())) {
+        throw new CommitFailedException("Cannot commit: stale table metadata");
+      } else if (base != currentMetadata) {
+        // This branch is different from BaseMetastoreTableOperations
+        LOGGER.debug(
+            "Base object differs from current metadata; proceeding because locations match");
+      } else if (base.metadataFileLocation().equals(metadata.metadataFileLocation())) {
+        // if the metadata is not changed, return early
+        LOGGER.info("Nothing to commit.");
+        return;
+      }
+
+      long start = System.currentTimeMillis();
+      doCommit(base, metadata);
+      deleteRemovedMetadataFiles(base, metadata);
+      requestRefresh();
+
+      LOGGER.info(
+          "Successfully committed to table {} in {} ms",
+          tableName(),
+          System.currentTimeMillis() - start);
+    }
+
+    /**
+     * Copied from {@link BaseMetastoreTableOperations} as the method is private there This is moved
+     * to `CatalogUtils` in Iceberg 1.7.0 and can be called from there once we depend on Iceberg
+     * 1.7.0
+     *
+     * <p>Deletes the oldest metadata files if {@link
+     * TableProperties#METADATA_DELETE_AFTER_COMMIT_ENABLED} is true.
+     *
+     * @param base table metadata on which previous versions were based
+     * @param metadata new table metadata with updated previous versions
+     */
+    protected void deleteRemovedMetadataFiles(TableMetadata base, TableMetadata metadata) {
+      if (base == null) {
+        return;
+      }
+
+      boolean deleteAfterCommit =
+          metadata.propertyAsBoolean(
+              TableProperties.METADATA_DELETE_AFTER_COMMIT_ENABLED,
+              TableProperties.METADATA_DELETE_AFTER_COMMIT_ENABLED_DEFAULT);
+
+      if (deleteAfterCommit) {
+        Set<TableMetadata.MetadataLogEntry> removedPreviousMetadataFiles =
+            Sets.newHashSet(base.previousFiles());
+        // TableMetadata#addPreviousFile builds up the metadata log and uses
+        // TableProperties.METADATA_PREVIOUS_VERSIONS_MAX to determine how many files should stay in
+        // the log, thus we don't include metadata.previousFiles() for deletion - everything else
+        // can
+        // be removed
+        removedPreviousMetadataFiles.removeAll(metadata.previousFiles());
+        if (io() instanceof SupportsBulkOperations) {
+          ((SupportsBulkOperations) io())
+              .deleteFiles(
+                  Iterables.transform(
+                      removedPreviousMetadataFiles, TableMetadata.MetadataLogEntry::file));
+        } else {
+          Tasks.foreach(removedPreviousMetadataFiles)
+              .noRetry()
+              .suppressFailureWhenFinished()
+              .onFailure(
+                  (previousMetadataFile, exc) ->
+                      LOGGER.warn(
+                          "Delete failed for previous metadata file: {}",
+                          previousMetadataFile,
+                          exc))
+              .run(previousMetadataFile -> io().deleteFile(previousMetadataFile.file()));
+        }
       }
     }
 
@@ -1872,6 +2026,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
       }
     }
 
+    // Drop the table:
     return getMetaStoreManager()
         .dropEntityIfExists(
             getCurrentPolarisContext(),
