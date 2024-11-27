@@ -58,7 +58,12 @@ public class PolarisEclipseLinkMetaStoreManagerTest extends BasePolarisMetaStore
     PolarisEclipseLinkStore store = new PolarisEclipseLinkStore(diagServices);
     PolarisEclipseLinkMetaStoreSessionImpl session =
         new PolarisEclipseLinkMetaStoreSessionImpl(
-            store, Mockito.mock(), () -> "realm", null, "polaris", new RandomPrincipalSecretsGenerator());
+            store,
+            Mockito.mock(),
+            () -> "realm",
+            null,
+            "polaris",
+            new RandomPrincipalSecretsGenerator());
     return new PolarisTestMetaStoreManager(
         new PolarisMetaStoreManagerImpl(),
         new PolarisCallContext(
@@ -79,7 +84,12 @@ public class PolarisEclipseLinkMetaStoreManagerTest extends BasePolarisMetaStore
     try {
       var session =
           new PolarisEclipseLinkMetaStoreSessionImpl(
-              store, Mockito.mock(), () -> "realm", confFile, "polaris", new RandomPrincipalSecretsGenerator());
+              store,
+              Mockito.mock(),
+              () -> "realm",
+              confFile,
+              "polaris",
+              new RandomPrincipalSecretsGenerator());
       assertNotNull(session);
       assertTrue(success);
     } catch (Exception e) {
