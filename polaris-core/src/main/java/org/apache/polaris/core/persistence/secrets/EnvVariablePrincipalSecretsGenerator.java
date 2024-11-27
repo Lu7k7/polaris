@@ -21,6 +21,7 @@ package org.apache.polaris.core.persistence.secrets;
 import org.apache.polaris.core.entity.PolarisPrincipalSecrets;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
 public class EnvVariablePrincipalSecretsGenerator extends PrincipalSecretsGenerator {
 
@@ -53,7 +54,8 @@ public class EnvVariablePrincipalSecretsGenerator extends PrincipalSecretsGenera
   }
 
   /** Load a single environment variable */
-  private static String getEnvironmentVariable(String key) {
+  @VisibleForTesting
+  String getEnvironmentVariable(String key) {
     return System.getenv(key);
   }
 

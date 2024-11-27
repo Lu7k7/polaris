@@ -28,6 +28,10 @@ public class RandomPrincipalSecretsGenerator extends PrincipalSecretsGenerator {
     super(realmName);
   }
 
+  public RandomPrincipalSecretsGenerator() {
+    super(null);
+  }
+
   /** {@inheritDoc} */
   @Override
   public PolarisPrincipalSecrets produceSecrets(@NotNull String principalName, long principalId) {

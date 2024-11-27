@@ -21,17 +21,28 @@ package org.apache.polaris.core.persistence.secrets;
 import org.apache.polaris.core.entity.PolarisPrincipalSecrets;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 
+/**
+ * A {@link PrincipalSecretsGenerator} implementation used for bootstrapping that uses an
+ *  {@link EnvVariablePrincipalSecretsGenerator} if possible and falls back to a
+ *  {@link RandomPrincipalSecretsGenerator} otherwise
+ */
 public class BootstrapPrincipalSecretsGenerator extends PrincipalSecretsGenerator {
 
   public BootstrapPrincipalSecretsGenerator(@Nullable String realmName) {
     super(realmName);
   }
 
-  private PrincipalSecretsGenerator getDelegate(
-      @Nullable String realmName, @NotNull String principalName) {
-    var envVarGenerator = new EnvVariablePrincipalSecretsGenerator(realmName);
-    if (envVarGenerator.systemGeneratedSecrets(principalName)) {
+  @VisibleForTesting
+  protected PrincipalSecretsGenerator buildEnvVariablePrincipalSecretsGenerator(String realmName) {
+    return new EnvVariablePrincipalSecretsGenerator(realmName);
+  }
+
+  @VisibleForTesting
+  protected PrincipalSecretsGenerator getDelegate(@NotNull String principalName) {
+    var envVarGenerator = buildEnvVariablePrincipalSecretsGenerator(principalName);
+    if (!envVarGenerator.systemGeneratedSecrets(principalName)) {
       return new RandomPrincipalSecretsGenerator(realmName);
     } else {
       return envVarGenerator;
@@ -40,13 +51,13 @@ public class BootstrapPrincipalSecretsGenerator extends PrincipalSecretsGenerato
 
   @Override
   public PolarisPrincipalSecrets produceSecrets(@NotNull String principalName, long principalId) {
-    PrincipalSecretsGenerator delegate = getDelegate(realmName, principalName);
+    PrincipalSecretsGenerator delegate = getDelegate(principalName);
     return delegate.produceSecrets(principalName, principalId);
   }
 
   @Override
   public boolean systemGeneratedSecrets(@NotNull String principalName) {
-    PrincipalSecretsGenerator delegate = getDelegate(realmName, principalName);
+    PrincipalSecretsGenerator delegate = getDelegate(principalName);
     return delegate.systemGeneratedSecrets(principalName);
   }
 }

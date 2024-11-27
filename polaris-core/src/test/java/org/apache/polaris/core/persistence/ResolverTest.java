@@ -18,8 +18,6 @@
  */
 package org.apache.polaris.core.persistence;
 
-import static org.apache.polaris.core.persistence.secrets.PrincipalSecretsGenerator.RANDOM_SECRETS;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -41,6 +39,7 @@ import org.apache.polaris.core.persistence.cache.PolarisRemoteCache.CachedEntryR
 import org.apache.polaris.core.persistence.resolver.Resolver;
 import org.apache.polaris.core.persistence.resolver.ResolverPath;
 import org.apache.polaris.core.persistence.resolver.ResolverStatus;
+import org.apache.polaris.core.persistence.secrets.RandomPrincipalSecretsGenerator;
 import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -98,7 +97,7 @@ public class ResolverTest {
   public ResolverTest() {
     diagServices = new PolarisDefaultDiagServiceImpl();
     store = new PolarisTreeMapStore(diagServices);
-    metaStore = new PolarisTreeMapMetaStoreSessionImpl(store, Mockito.mock(), RANDOM_SECRETS);
+    metaStore = new PolarisTreeMapMetaStoreSessionImpl(store, Mockito.mock(), new RandomPrincipalSecretsGenerator());
     callCtx = new PolarisCallContext(metaStore, diagServices);
     metaStoreManager = new PolarisMetaStoreManagerImpl();
 
