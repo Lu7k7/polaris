@@ -18,11 +18,15 @@
  */
 package org.apache.polaris.service.admin;
 
+import static org.apache.polaris.core.auth.PolarisAuthorizableOperation.UPDATE_CATALOG_MAINTENANCE_PROPERTIES;
+import static org.apache.polaris.core.entity.PolarisEntityConstants.MAINTENANCE_PREFIX;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -85,6 +89,7 @@ import org.apache.polaris.core.storage.aws.AwsStorageConfigurationInfo;
 import org.apache.polaris.core.storage.azure.AzureStorageConfigurationInfo;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -658,6 +663,35 @@ public class PolarisAdminService {
     }
   }
 
+  @VisibleForTesting
+  static boolean maintenancePropertyChanged(
+      @NotNull Map<String, String> map1, @NotNull Map<String, String> map2) {
+    Set<String> addedKeys = new HashSet<>(map2.keySet());
+    addedKeys.removeAll(map1.keySet());
+    if (addedKeys.stream().anyMatch(key -> key.startsWith((MAINTENANCE_PREFIX)))) {
+      return true;
+    }
+
+    Set<String> removedKeys = new HashSet<>(map1.keySet());
+    removedKeys.removeAll(map2.keySet());
+    if (removedKeys.stream().anyMatch(key -> key.startsWith((MAINTENANCE_PREFIX)))) {
+      return true;
+    }
+
+    Set<String> commonKeys = new HashSet<>(map1.keySet());
+    commonKeys.retainAll(map2.keySet());
+
+    for (String key : commonKeys) {
+      if (!Objects.equals(map1.get(key), map2.get(key))) {
+        if (key.startsWith(MAINTENANCE_PREFIX)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   public @NotNull CatalogEntity updateCatalog(String name, UpdateCatalogRequest updateRequest) {
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.UPDATE_CATALOG;
     authorizeBasicTopLevelEntityOperationOrThrow(op, name, PolarisEntityType.CATALOG);
@@ -699,6 +733,12 @@ public class PolarisAdminService {
           updateRequest.getStorageConfigInfo(), defaultBaseLocation);
     }
     CatalogEntity updatedEntity = updateBuilder.build();
+
+    if (maintenancePropertyChanged(
+        currentCatalogEntity.getPropertiesAsMap(), updatedEntity.getPropertiesAsMap())) {
+      authorizeBasicTopLevelEntityOperationOrThrow(
+          UPDATE_CATALOG_MAINTENANCE_PROPERTIES, name, PolarisEntityType.CATALOG);
+    }
 
     validateUpdateCatalogDiffOrThrow(currentCatalogEntity, updatedEntity);
 

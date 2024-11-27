@@ -18,6 +18,13 @@
  */
 package org.apache.polaris.service.admin;
 
+import static org.apache.polaris.core.entity.PolarisEntityConstants.MAINTENANCE_PREFIX;
+import static org.apache.polaris.core.entity.PolarisMaintenanceProperties.COMPACTION;
+import static org.apache.polaris.service.admin.PolarisAdminService.maintenancePropertyChanged;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +40,7 @@ import org.apache.polaris.core.entity.PolarisPrivilege;
 import org.apache.polaris.core.entity.PrincipalEntity;
 import org.apache.polaris.core.entity.PrincipalRoleEntity;
 import org.assertj.core.api.Assertions;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
 public class PolarisAdminServiceAuthzTest extends PolarisAuthzTestBase {
@@ -211,6 +219,7 @@ public class PolarisAdminServiceAuthzTest extends PolarisAuthzTestBase {
         List.of(
             PolarisPrivilege.SERVICE_MANAGE_ACCESS,
             PolarisPrivilege.CATALOG_WRITE_PROPERTIES,
+            PolarisPrivilege.CATALOG_WRITE_MAINTENANCE_PROPERTIES,
             PolarisPrivilege.CATALOG_FULL_METADATA,
             PolarisPrivilege.CATALOG_MANAGE_METADATA,
             PolarisPrivilege.CATALOG_MANAGE_CONTENT),
@@ -264,6 +273,61 @@ public class PolarisAdminServiceAuthzTest extends PolarisAuthzTestBase {
         (privilege) ->
             adminService.revokePrivilegeOnRootContainerFromPrincipalRole(
                 PRINCIPAL_ROLE1, privilege));
+  }
+
+  @Test
+  public void testUpdateCatalogSufficientPrivilegesForMaintenanceProperties() {
+    doTestSufficientPrivileges(
+        List.of(
+            PolarisPrivilege.CATALOG_WRITE_MAINTENANCE_PROPERTIES,
+            PolarisPrivilege.SERVICE_MANAGE_ACCESS,
+            PolarisPrivilege.CATALOG_FULL_METADATA,
+            PolarisPrivilege.CATALOG_MANAGE_METADATA,
+            PolarisPrivilege.CATALOG_MANAGE_CONTENT),
+        updateCatalogMaintenanceProperty(),
+        null,
+        (privilege) ->
+            adminService.grantPrivilegeOnRootContainerToPrincipalRole(PRINCIPAL_ROLE1, privilege),
+        (privilege) ->
+            adminService.revokePrivilegeOnRootContainerFromPrincipalRole(
+                PRINCIPAL_ROLE1, privilege));
+  }
+
+  @Test
+  public void testUpdateCatalogInsufficientPrivilegesForMaintenanceProperties() {
+    doTestInsufficientPrivileges(
+        List.of(
+            PolarisPrivilege.NAMESPACE_FULL_METADATA,
+            PolarisPrivilege.TABLE_FULL_METADATA,
+            PolarisPrivilege.VIEW_FULL_METADATA,
+            PolarisPrivilege.VIEW_FULL_METADATA,
+            PolarisPrivilege.PRINCIPAL_FULL_METADATA,
+            PolarisPrivilege.PRINCIPAL_ROLE_FULL_METADATA,
+            PolarisPrivilege.CATALOG_READ_PROPERTIES,
+            PolarisPrivilege.CATALOG_LIST,
+            PolarisPrivilege.CATALOG_CREATE,
+            PolarisPrivilege.CATALOG_DROP,
+            PolarisPrivilege.CATALOG_ROLE_FULL_METADATA,
+            PolarisPrivilege.CATALOG_WRITE_PROPERTIES,
+            PolarisPrivilege.CATALOG_MANAGE_ACCESS),
+        updateCatalogMaintenanceProperty(),
+        (privilege) ->
+            adminService.grantPrivilegeOnRootContainerToPrincipalRole(PRINCIPAL_ROLE1, privilege),
+        (privilege) ->
+            adminService.revokePrivilegeOnRootContainerFromPrincipalRole(
+                PRINCIPAL_ROLE1, privilege));
+  }
+
+  private @NotNull Runnable updateCatalogMaintenanceProperty() {
+    return () -> {
+      var entityVersion = newTestAdminService().getCatalog(CATALOG_NAME).getEntityVersion();
+      var updateRequest =
+          UpdateCatalogRequest.builder()
+              .setCurrentEntityVersion(entityVersion)
+              .setProperties(Map.of(COMPACTION.getValue(), "{}"))
+              .build();
+      newTestAdminService().updateCatalog(CATALOG_NAME, updateRequest);
+    };
   }
 
   @Test
@@ -1836,5 +1900,49 @@ public class PolarisAdminServiceAuthzTest extends PolarisAuthzTestBase {
             adminService.grantPrivilegeOnCatalogToRole(CATALOG_NAME, CATALOG_ROLE1, privilege),
         (privilege) ->
             adminService.revokePrivilegeOnCatalogFromRole(CATALOG_NAME, CATALOG_ROLE1, privilege));
+  }
+
+  @Test
+  public void testMaintenancePropertyChanged() {
+    // Scenario 1: Added Maintenance Key
+    Map<String, String> map1 = new HashMap<>();
+    Map<String, String> map2 = new HashMap<>();
+    map2.put(MAINTENANCE_PREFIX + "key1", "value1");
+
+    assertTrue(
+        maintenancePropertyChanged(map1, map2), "Should return true for added maintenance key");
+
+    // Scenario 2: Removed Maintenance Key
+    map1.put(MAINTENANCE_PREFIX + "key1", "value1");
+    map2.clear();
+
+    assertTrue(
+        maintenancePropertyChanged(map1, map2), "Should return true for removed maintenance key");
+
+    // Scenario 3: Changed Maintenance Key
+    map1.put(MAINTENANCE_PREFIX + "key1", "value1");
+    map2.put(MAINTENANCE_PREFIX + "key1", "value2");
+
+    assertTrue(
+        maintenancePropertyChanged(map1, map2), "Should return true for changed maintenance key");
+
+    // Scenario 4: No Maintenance Keys Involved
+    map1.clear();
+    map2.clear();
+    map1.put("other.key1", "value1");
+    map2.put("other.key1", "value1");
+
+    assertFalse(
+        maintenancePropertyChanged(map1, map2),
+        "Should return false when no maintenance keys are involved");
+
+    // Scenario 5: Added Non-Maintenance Key
+    map1.clear();
+    map2.clear();
+    map2.put("other.key1", "value1");
+
+    assertFalse(
+        maintenancePropertyChanged(map1, map2),
+        "Should return false for added non-maintenance key");
   }
 }
