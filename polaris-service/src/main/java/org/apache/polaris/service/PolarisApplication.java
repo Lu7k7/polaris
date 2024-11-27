@@ -65,6 +65,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -74,11 +75,15 @@ import org.apache.polaris.core.PolarisConfigurationStore;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
 import org.apache.polaris.core.auth.PolarisAuthorizerImpl;
+import org.apache.polaris.core.auth.PolarisGrantManager;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.monitor.MetricRegistryAware;
 import org.apache.polaris.core.monitor.PolarisMetricRegistry;
 import org.apache.polaris.core.persistence.MetaStoreManagerFactory;
+import org.apache.polaris.core.persistence.cache.EntityCache;
+import org.apache.polaris.core.persistence.cache.EntityCacheGrantManager;
+import org.apache.polaris.core.persistence.cache.RealmEntityCacheFactory;
 import org.apache.polaris.service.admin.PolarisServiceImpl;
 import org.apache.polaris.service.admin.api.PolarisCatalogsApi;
 import org.apache.polaris.service.admin.api.PolarisPrincipalRolesApi;
@@ -180,8 +185,14 @@ public class PolarisApplication extends Application<PolarisApplicationConfig> {
     if (metaStoreManagerFactory instanceof ConfigurationStoreAware) {
       ((ConfigurationStoreAware) metaStoreManagerFactory).setConfigurationStore(configurationStore);
     }
+    ConcurrentHashMap<RealmContext, EntityCache> realmEntityCache = new ConcurrentHashMap<>();
+    RealmEntityCacheFactory cacheFactory =
+        realm ->
+            realmEntityCache.computeIfAbsent(
+                realm,
+                (r) -> new EntityCache(metaStoreManagerFactory.getOrCreateMetaStoreManager(realm)));
     RealmEntityManagerFactory entityManagerFactory =
-        new RealmEntityManagerFactory(metaStoreManagerFactory);
+        new RealmEntityManagerFactory(metaStoreManagerFactory, cacheFactory);
     CallContextResolver callContextResolver = configuration.getCallContextResolver();
     callContextResolver.setMetaStoreManagerFactory(metaStoreManagerFactory);
     if (callContextResolver instanceof ConfigurationStoreAware csa) {
@@ -225,7 +236,10 @@ public class PolarisApplication extends Application<PolarisApplicationConfig> {
         new PolarisCallContextCatalogFactory(
             entityManagerFactory, metaStoreManagerFactory, taskExecutor, fileIOFactory);
 
-    PolarisAuthorizer authorizer = new PolarisAuthorizerImpl(configurationStore);
+    PolarisGrantManager.Factory factory =
+        new EntityCacheGrantManager.EntityCacheGrantManagerFactory(
+            metaStoreManagerFactory, cacheFactory);
+    PolarisAuthorizer authorizer = new PolarisAuthorizerImpl(configurationStore, factory);
     IcebergCatalogAdapter catalogAdapter =
         new IcebergCatalogAdapter(
             catalogFactory, entityManagerFactory, metaStoreManagerFactory, authorizer);
