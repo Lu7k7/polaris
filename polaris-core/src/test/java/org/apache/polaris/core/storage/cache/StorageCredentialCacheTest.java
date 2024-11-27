@@ -67,7 +67,8 @@ public class StorageCredentialCacheTest {
     PolarisTreeMapStore store = new PolarisTreeMapStore(diagServices);
     // to interact with the metastore
     PolarisMetaStoreSession metaStore =
-        new PolarisTreeMapMetaStoreSessionImpl(store, Mockito.mock(), new RandomPrincipalSecretsGenerator());
+        new PolarisTreeMapMetaStoreSessionImpl(
+            store, Mockito.mock(), new RandomPrincipalSecretsGenerator());
     callCtx = new PolarisCallContext(metaStore, diagServices);
     metaStoreManager = Mockito.mock(PolarisMetaStoreManagerImpl.class);
     storageCredentialCache = new StorageCredentialCache();

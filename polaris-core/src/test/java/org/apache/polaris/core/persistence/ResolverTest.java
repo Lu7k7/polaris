@@ -97,7 +97,9 @@ public class ResolverTest {
   public ResolverTest() {
     diagServices = new PolarisDefaultDiagServiceImpl();
     store = new PolarisTreeMapStore(diagServices);
-    metaStore = new PolarisTreeMapMetaStoreSessionImpl(store, Mockito.mock(), new RandomPrincipalSecretsGenerator());
+    metaStore =
+        new PolarisTreeMapMetaStoreSessionImpl(
+            store, Mockito.mock(), new RandomPrincipalSecretsGenerator());
     callCtx = new PolarisCallContext(metaStore, diagServices);
     metaStoreManager = new PolarisMetaStoreManagerImpl();
 

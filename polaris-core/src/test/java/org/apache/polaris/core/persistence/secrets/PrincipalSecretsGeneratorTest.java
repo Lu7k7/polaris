@@ -51,26 +51,26 @@ class PrincipalSecretsGeneratorTest {
     assertThat(s.getSecondarySecret()).isNotNull();
   }
 
-    @Test
-    void testEnvVariableSecrets() {
-      EnvVariablePrincipalSecretsGenerator psg =
-          Mockito.spy(new EnvVariablePrincipalSecretsGenerator("REALM"));
+  @Test
+  void testEnvVariableSecrets() {
+    EnvVariablePrincipalSecretsGenerator psg =
+        Mockito.spy(new EnvVariablePrincipalSecretsGenerator("REALM"));
 
-      String clientIdKey = "POLARIS_BOOTSTRAP_REALM_PRINCIPAL_CLIENT_ID";
-      String clientSecretKey = "POLARIS_BOOTSTRAP_REALM_PRINCIPAL_CLIENT_SECRET";
+    String clientIdKey = "POLARIS_BOOTSTRAP_REALM_PRINCIPAL_CLIENT_ID";
+    String clientSecretKey = "POLARIS_BOOTSTRAP_REALM_PRINCIPAL_CLIENT_SECRET";
 
-      doReturn("test-id").when(psg).getEnvironmentVariable(clientIdKey);
-      doReturn("test-secret").when(psg).getEnvironmentVariable(clientSecretKey);
+    doReturn("test-id").when(psg).getEnvironmentVariable(clientIdKey);
+    doReturn("test-secret").when(psg).getEnvironmentVariable(clientSecretKey);
 
-      // Invoke the method
-      PolarisPrincipalSecrets secrets = psg.produceSecrets("PRINCIPAL", 123);
+    // Invoke the method
+    PolarisPrincipalSecrets secrets = psg.produceSecrets("PRINCIPAL", 123);
 
-      // Verify the result
-      Assertions.assertNotNull(secrets);
-      Assertions.assertEquals(123, secrets.getPrincipalId());
-      Assertions.assertEquals("test-id", secrets.getPrincipalClientId());
-      Assertions.assertEquals("test-secret", secrets.getMainSecret());
-    }
+    // Verify the result
+    Assertions.assertNotNull(secrets);
+    Assertions.assertEquals(123, secrets.getPrincipalId());
+    Assertions.assertEquals("test-id", secrets.getPrincipalClientId());
+    Assertions.assertEquals("test-secret", secrets.getMainSecret());
+  }
 
   @Test
   void testBoostrapGeneratorDelegationToRandomPrincipalSecrets() {
@@ -93,7 +93,8 @@ class PrincipalSecretsGeneratorTest {
       }
 
       @Override
-      protected PrincipalSecretsGenerator buildEnvVariablePrincipalSecretsGenerator(String realmName) {
+      protected PrincipalSecretsGenerator buildEnvVariablePrincipalSecretsGenerator(
+          String realmName) {
         return mockedEnvVariablePrincipalSecretsGenerator;
       }
 
@@ -102,11 +103,11 @@ class PrincipalSecretsGeneratorTest {
       }
     }
 
-
     ExposingPrincipalSecretsGenerator fallback = new ExposingPrincipalSecretsGenerator(null);
     Assertions.assertInstanceOf(RandomPrincipalSecretsGenerator.class, fallback.seeDelegate("p"));
 
     ExposingPrincipalSecretsGenerator hasVars = new ExposingPrincipalSecretsGenerator("REALM");
-    Assertions.assertInstanceOf(EnvVariablePrincipalSecretsGenerator.class, hasVars.seeDelegate("PRINCIPAL"));
+    Assertions.assertInstanceOf(
+        EnvVariablePrincipalSecretsGenerator.class, hasVars.seeDelegate("PRINCIPAL"));
   }
 }

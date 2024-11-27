@@ -24,9 +24,9 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
- * A {@link PrincipalSecretsGenerator} implementation used for bootstrapping that uses an
- *  {@link EnvVariablePrincipalSecretsGenerator} if possible and falls back to a
- *  {@link RandomPrincipalSecretsGenerator} otherwise
+ * A {@link PrincipalSecretsGenerator} implementation used for bootstrapping that uses an {@link
+ * EnvVariablePrincipalSecretsGenerator} if possible and falls back to a {@link
+ * RandomPrincipalSecretsGenerator} otherwise
  */
 public class BootstrapPrincipalSecretsGenerator extends PrincipalSecretsGenerator {
 
