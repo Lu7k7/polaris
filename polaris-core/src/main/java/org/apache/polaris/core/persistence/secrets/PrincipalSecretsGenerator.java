@@ -79,6 +79,6 @@ public abstract class PrincipalSecretsGenerator {
    * @return A {@link PrincipalSecretsGenerator} that can generate secrets through `produceSecrets`
    */
   public static PrincipalSecretsGenerator bootstrap(String realmName) {
-    return new DefaultPrincipalSecretsGenerator(realmName);
+    return new BootstrapPrincipalSecretsGenerator(realmName);
   }
 }

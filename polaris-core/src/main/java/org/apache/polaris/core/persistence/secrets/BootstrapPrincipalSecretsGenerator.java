@@ -22,9 +22,9 @@ import org.apache.polaris.core.entity.PolarisPrincipalSecrets;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class DefaultPrincipalSecretsGenerator extends PrincipalSecretsGenerator {
+public class BootstrapPrincipalSecretsGenerator extends PrincipalSecretsGenerator {
 
-  public DefaultPrincipalSecretsGenerator(@Nullable String realmName) {
+  public BootstrapPrincipalSecretsGenerator(@Nullable String realmName) {
     super(realmName);
   }
 
