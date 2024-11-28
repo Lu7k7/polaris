@@ -79,6 +79,9 @@ featureConfiguration:
     - GCS
     - AZURE
 
+dynamicFeatureConfigResolver:
+  type: no-op
+
 metaStoreManager:
   type: in-memory
 
