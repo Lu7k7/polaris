@@ -33,10 +33,6 @@ dependencies {
   constraints {
     implementation("io.airlift:aircompressor:0.27") { because("Vulnerability detected in 0.25") }
   }
-  // TODO - this is only here for the Discoverable interface
-  // We should use a different mechanism to discover the plugin implementations
-  implementation(platform(libs.dropwizard.bom))
-  implementation("io.dropwizard:dropwizard-jackson")
 
   implementation(platform(libs.jackson.bom))
   implementation("com.fasterxml.jackson.core:jackson-annotations")
@@ -72,6 +68,7 @@ dependencies {
   implementation(libs.swagger.annotations)
   implementation(libs.swagger.jaxrs)
   implementation(libs.jakarta.validation.api)
+  implementation("jakarta.inject:jakarta.inject-api:2.0.1")
 
   implementation("org.apache.iceberg:iceberg-aws")
   implementation(platform(libs.awssdk.bom))

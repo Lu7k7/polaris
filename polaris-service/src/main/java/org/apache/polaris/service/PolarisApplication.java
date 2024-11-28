@@ -23,19 +23,30 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.polaris.service.config.PolarisApplicationConfig.REQUEST_BODY_BYTES_NO_LIMIT;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.StreamReadConstraints;
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.deser.std.StdValueInstantiator;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.module.SimpleValueInstantiators;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.dropwizard.auth.AuthDynamicFeature;
 import io.dropwizard.auth.AuthFilter;
+import io.dropwizard.auth.Authenticator;
 import io.dropwizard.auth.oauth.OAuthCredentialAuthFilter;
 import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.core.Application;
 import io.dropwizard.core.setup.Bootstrap;
 import io.dropwizard.core.setup.Environment;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
@@ -50,6 +61,8 @@ import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.opentelemetry.semconv.ServiceAttributes;
 import io.prometheus.metrics.exporter.servlet.jakarta.PrometheusMetricsServlet;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
@@ -70,28 +83,32 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.iceberg.rest.RESTSerializers;
-import org.apache.polaris.core.PolarisConfigurationStore;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.auth.PolarisAuthorizer;
 import org.apache.polaris.core.auth.PolarisAuthorizerImpl;
+import org.apache.polaris.core.auth.PolarisGrantManager;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
-import org.apache.polaris.core.monitor.MetricRegistryAware;
+import org.apache.polaris.core.context.RealmScope;
 import org.apache.polaris.core.monitor.PolarisMetricRegistry;
 import org.apache.polaris.core.persistence.MetaStoreManagerFactory;
+import org.apache.polaris.core.persistence.PolarisMetaStoreManager;
+import org.apache.polaris.core.persistence.cache.EntityCache;
+import org.apache.polaris.core.persistence.cache.PolarisRemoteCache;
 import org.apache.polaris.service.admin.PolarisServiceImpl;
 import org.apache.polaris.service.admin.api.PolarisCatalogsApi;
+import org.apache.polaris.service.admin.api.PolarisCatalogsApiService;
 import org.apache.polaris.service.admin.api.PolarisPrincipalRolesApi;
+import org.apache.polaris.service.admin.api.PolarisPrincipalRolesApiService;
 import org.apache.polaris.service.admin.api.PolarisPrincipalsApi;
-import org.apache.polaris.service.auth.DiscoverableAuthenticator;
+import org.apache.polaris.service.admin.api.PolarisPrincipalsApiService;
 import org.apache.polaris.service.catalog.IcebergCatalogAdapter;
 import org.apache.polaris.service.catalog.api.IcebergRestCatalogApi;
+import org.apache.polaris.service.catalog.api.IcebergRestCatalogApiService;
 import org.apache.polaris.service.catalog.api.IcebergRestConfigurationApi;
+import org.apache.polaris.service.catalog.api.IcebergRestConfigurationApiService;
 import org.apache.polaris.service.catalog.api.IcebergRestOAuth2Api;
 import org.apache.polaris.service.catalog.io.FileIOFactory;
-import org.apache.polaris.service.config.ConfigurationStoreAware;
-import org.apache.polaris.service.config.HasMetaStoreManagerFactory;
-import org.apache.polaris.service.config.OAuth2ApiService;
 import org.apache.polaris.service.config.PolarisApplicationConfig;
 import org.apache.polaris.service.config.RealmEntityManagerFactory;
 import org.apache.polaris.service.config.Serializers;
@@ -100,30 +117,35 @@ import org.apache.polaris.service.context.CallContextCatalogFactory;
 import org.apache.polaris.service.context.CallContextResolver;
 import org.apache.polaris.service.context.PolarisCallContextCatalogFactory;
 import org.apache.polaris.service.context.RealmContextResolver;
+import org.apache.polaris.service.context.RealmScopeContext;
 import org.apache.polaris.service.exception.IcebergExceptionMapper;
 import org.apache.polaris.service.exception.IcebergJerseyViolationExceptionMapper;
 import org.apache.polaris.service.exception.IcebergJsonProcessingExceptionMapper;
 import org.apache.polaris.service.exception.PolarisExceptionMapper;
 import org.apache.polaris.service.persistence.InMemoryPolarisMetaStoreManagerFactory;
+import org.apache.polaris.service.persistence.cache.EntityCacheFactory;
 import org.apache.polaris.service.ratelimiter.RateLimiterFilter;
-import org.apache.polaris.service.storage.PolarisStorageIntegrationProviderImpl;
 import org.apache.polaris.service.task.ManifestFileCleanupTaskHandler;
 import org.apache.polaris.service.task.TableCleanupTaskHandler;
+import org.apache.polaris.service.task.TaskExecutor;
 import org.apache.polaris.service.task.TaskExecutorImpl;
 import org.apache.polaris.service.task.TaskFileIOSupplier;
 import org.apache.polaris.service.throttling.StreamReadConstraintsExceptionMapper;
-import org.apache.polaris.service.tracing.OpenTelemetryAware;
 import org.apache.polaris.service.tracing.TracingFilter;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
+import org.glassfish.hk2.api.Context;
+import org.glassfish.hk2.api.Factory;
+import org.glassfish.hk2.api.ServiceLocator;
+import org.glassfish.hk2.api.TypeLiteral;
+import org.glassfish.hk2.utilities.ServiceLocatorUtilities;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.services.sts.StsClient;
-import software.amazon.awssdk.services.sts.StsClientBuilder;
 
 public class PolarisApplication extends Application<PolarisApplicationConfig> {
   private static final Logger LOGGER = LoggerFactory.getLogger(PolarisApplication.class);
+  private ServiceLocator serviceLocator;
 
   public static void main(final String[] args) throws Exception {
     new PolarisApplication().run(args);
@@ -150,87 +172,195 @@ public class PolarisApplication extends Application<PolarisApplicationConfig> {
 
     bootstrap.addCommand(new BootstrapRealmsCommand());
     bootstrap.addCommand(new PurgeRealmsCommand());
+    serviceLocator = ServiceLocatorUtilities.createAndPopulateServiceLocator();
+    SimpleValueInstantiators instantiators = new SimpleValueInstantiators();
+    ObjectMapper objectMapper = bootstrap.getObjectMapper();
+
+    // Register the PolarisApplicationConfig class with the ServiceLocator so that we can inject
+    // instances of the configuration or certain of the configuration fields into other classes.
+    // The configuration's postConstruct method registers all the configured fields as factories
+    // so that they are used for DI.
+    ServiceLocatorUtilities.addClasses(serviceLocator, PolarisApplicationConfig.class);
+    TypeFactory typeFactory = TypeFactory.defaultInstance();
+    instantiators.addValueInstantiator(
+        PolarisApplicationConfig.class,
+        new ServiceLocatorValueInstantiator(
+            objectMapper.getDeserializationConfig(),
+            typeFactory.constructType(PolarisApplicationConfig.class),
+            serviceLocator));
+
+    // Use the default ServiceLocator to discover the implementations of various contract providers
+    // and register them as subtypes with the ObjectMapper. This allows Jackson to discover the
+    // various implementations and use the type annotations to determine which instance to use when
+    // parsing the YAML configuration.
+    serviceLocator
+        .getDescriptors((c) -> true)
+        .forEach(
+            descriptor -> {
+              try {
+                Class<?> klazz =
+                    PolarisApplication.class
+                        .getClassLoader()
+                        .loadClass(descriptor.getImplementation());
+                String name = descriptor.getName();
+                if (name == null) {
+                  objectMapper.registerSubtypes(klazz);
+                } else {
+                  objectMapper.registerSubtypes(new NamedType(klazz, name));
+                }
+              } catch (ClassNotFoundException e) {
+                LOGGER.error("Error loading class {}", descriptor.getImplementation(), e);
+                throw new RuntimeException("Unable to start Polaris application");
+              }
+            });
+
+    ServiceLocatorUtilities.addClasses(serviceLocator, PolarisMetricRegistry.class);
+    ServiceLocatorUtilities.bind(
+        serviceLocator,
+        new AbstractBinder() {
+          @Override
+          protected void configure() {
+            bind(new PrometheusMeterRegistry(PrometheusConfig.DEFAULT)).to(MeterRegistry.class);
+          }
+        });
+    SimpleModule module = new SimpleModule();
+    module.setValueInstantiators(instantiators);
+    module.setMixInAnnotation(Authenticator.class, NamedAuthenticator.class);
+    objectMapper.registerModule(module);
   }
+
+  /**
+   * Value instantiator that uses the ServiceLocator to create instances of the various service
+   * types
+   */
+  private static class ServiceLocatorValueInstantiator extends StdValueInstantiator {
+    private final ServiceLocator serviceLocator;
+
+    public ServiceLocatorValueInstantiator(
+        DeserializationConfig config, JavaType valueType, ServiceLocator serviceLocator) {
+      super(config, valueType);
+      this.serviceLocator = serviceLocator;
+    }
+
+    @Override
+    public boolean canCreateUsingDefault() {
+      return true;
+    }
+
+    @Override
+    public boolean canInstantiate() {
+      return true;
+    }
+
+    @Override
+    public Object createUsingDefault(DeserializationContext ctxt) throws IOException {
+      return ServiceLocatorUtilities.findOrCreateService(serviceLocator, getValueClass());
+    }
+  }
+
+  /**
+   * Authenticator uses the java Class name in the YAML configuration. Since the Authenticator
+   * interface is owned by Dropwizard, we need to use a MixIn to tell Jackson what field to use to
+   * discover the implementation from the configuration.
+   */
+  @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, property = "class")
+  static final class NamedAuthenticator {}
 
   @Override
   public void run(PolarisApplicationConfig configuration, Environment environment) {
-    MetaStoreManagerFactory metaStoreManagerFactory = configuration.getMetaStoreManagerFactory();
-
-    metaStoreManagerFactory.setStorageIntegrationProvider(
-        new PolarisStorageIntegrationProviderImpl(
-            () -> {
-              StsClientBuilder stsClientBuilder = StsClient.builder();
-              AwsCredentialsProvider awsCredentialsProvider = configuration.credentialsProvider();
-              if (awsCredentialsProvider != null) {
-                stsClientBuilder.credentialsProvider(awsCredentialsProvider);
-              }
-              return stsClientBuilder.build();
-            },
-            configuration.getGcpCredentialsProvider()));
-
-    PolarisMetricRegistry polarisMetricRegistry =
-        new PolarisMetricRegistry(new PrometheusMeterRegistry(PrometheusConfig.DEFAULT));
-    metaStoreManagerFactory.setMetricRegistry(polarisMetricRegistry);
-
     OpenTelemetry openTelemetry = setupTracing();
-    if (metaStoreManagerFactory instanceof OpenTelemetryAware otAware) {
-      otAware.setOpenTelemetry(openTelemetry);
-    }
-    PolarisConfigurationStore configurationStore = configuration.getConfigurationStore();
-    if (metaStoreManagerFactory instanceof ConfigurationStoreAware) {
-      ((ConfigurationStoreAware) metaStoreManagerFactory).setConfigurationStore(configurationStore);
-    }
-    RealmEntityManagerFactory entityManagerFactory =
-        new RealmEntityManagerFactory(metaStoreManagerFactory);
-    CallContextResolver callContextResolver = configuration.getCallContextResolver();
-    callContextResolver.setMetaStoreManagerFactory(metaStoreManagerFactory);
-    if (callContextResolver instanceof ConfigurationStoreAware csa) {
-      csa.setConfigurationStore(configurationStore);
-    }
+    PolarisMetricRegistry polarisMetricRegistry =
+        configuration.findService(PolarisMetricRegistry.class);
 
-    RealmContextResolver realmContextResolver = configuration.getRealmContextResolver();
-    realmContextResolver.setMetaStoreManagerFactory(metaStoreManagerFactory);
+    MetaStoreManagerFactory metaStoreManagerFactory =
+        configuration.findService(MetaStoreManagerFactory.class);
+
+    // Use the PolarisApplicationConfig to register dependencies in the Jersey resource
+    // configuration. This uses a different ServiceLocator from the one in the bootstrap step
+    environment.jersey().register(configuration.binder());
+    environment
+        .jersey()
+        .register(
+            new AbstractBinder() {
+              @Override
+              protected void configure() {
+                bind(RealmScopeContext.class)
+                    .in(Singleton.class)
+                    .to(new TypeLiteral<Context<RealmScope>>() {});
+                bindFactory(PolarisMetaStoreManagerFactory.class)
+                    .to(PolarisMetaStoreManager.class)
+                    .in(RealmScope.class);
+                bindFactory(EntityCacheFactory.class).in(RealmScope.class).to(EntityCache.class);
+
+                bindFactory(PolarisRemoteCacheFactory.class)
+                    .in(RealmScope.class)
+                    .to(PolarisRemoteCache.class);
+
+                // factory to use a cache delegating grant cache
+                // currently depends explicitly on the metaStoreManager as the delegate grant
+                // manager
+                bindFactory(PolarisMetaStoreManagerFactory.class)
+                    .in(RealmScope.class)
+                    .to(PolarisGrantManager.class);
+                bind(polarisMetricRegistry).to(PolarisMetricRegistry.class);
+                polarisMetricRegistry.init(
+                    IcebergRestCatalogApi.class,
+                    IcebergRestConfigurationApi.class,
+                    IcebergRestOAuth2Api.class,
+                    PolarisCatalogsApi.class,
+                    PolarisPrincipalsApi.class,
+                    PolarisPrincipalRolesApi.class);
+                bind((PrometheusMeterRegistry) polarisMetricRegistry.getMeterRegistry())
+                    .to(PrometheusMeterRegistry.class);
+                bind(openTelemetry).to(OpenTelemetry.class);
+                bindAsContract(RealmEntityManagerFactory.class).in(RealmScope.class);
+                bind(PolarisCallContextCatalogFactory.class)
+                    .to(CallContextCatalogFactory.class)
+                    .in(Singleton.class);
+                bind(PolarisAuthorizerImpl.class).in(Singleton.class).to(PolarisAuthorizer.class);
+                bind(IcebergCatalogAdapter.class)
+                    .in(Singleton.class)
+                    .to(IcebergRestCatalogApiService.class)
+                    .to(IcebergRestConfigurationApiService.class);
+                bind(PolarisServiceImpl.class)
+                    .in(Singleton.class)
+                    .to(PolarisCatalogsApiService.class)
+                    .to(PolarisPrincipalsApiService.class)
+                    .to(PolarisPrincipalRolesApiService.class);
+                FileIOFactory fileIOFactory = configuration.findService(FileIOFactory.class);
+
+                TaskHandlerConfiguration taskConfig = configuration.getTaskHandler();
+                TaskExecutorImpl taskExecutor =
+                    new TaskExecutorImpl(taskConfig.executorService(), metaStoreManagerFactory);
+                TaskFileIOSupplier fileIOSupplier =
+                    new TaskFileIOSupplier(metaStoreManagerFactory, fileIOFactory);
+                taskExecutor.addTaskHandler(
+                    new TableCleanupTaskHandler(
+                        taskExecutor, metaStoreManagerFactory, fileIOSupplier));
+                taskExecutor.addTaskHandler(
+                    new ManifestFileCleanupTaskHandler(
+                        fileIOSupplier, Executors.newVirtualThreadPerTaskExecutor()));
+
+                bind(taskExecutor).to(TaskExecutor.class);
+              }
+            });
+
+    // servlet filters don't use the underlying DI
     environment
         .servlets()
         .addFilter(
-            "realmContext", new ContextResolverFilter(realmContextResolver, callContextResolver))
+            "realmContext",
+            new ContextResolverFilter(
+                configuration.findService(RealmContextResolver.class),
+                configuration.findService(CallContextResolver.class)))
         .addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), true, "/*");
-
-    FileIOFactory fileIOFactory = configuration.getFileIOFactory();
-    if (fileIOFactory instanceof MetricRegistryAware mrAware) {
-      mrAware.setMetricRegistry(polarisMetricRegistry);
-    }
-    if (fileIOFactory instanceof OpenTelemetryAware otAware) {
-      otAware.setOpenTelemetry(openTelemetry);
-    }
-    if (fileIOFactory instanceof ConfigurationStoreAware csAware) {
-      csAware.setConfigurationStore(configurationStore);
-    }
-
-    TaskHandlerConfiguration taskConfig = configuration.getTaskHandler();
-    TaskExecutorImpl taskExecutor =
-        new TaskExecutorImpl(taskConfig.executorService(), metaStoreManagerFactory);
-    TaskFileIOSupplier fileIOSupplier =
-        new TaskFileIOSupplier(metaStoreManagerFactory, fileIOFactory);
-    taskExecutor.addTaskHandler(
-        new TableCleanupTaskHandler(taskExecutor, metaStoreManagerFactory, fileIOSupplier));
-    taskExecutor.addTaskHandler(
-        new ManifestFileCleanupTaskHandler(
-            fileIOSupplier, Executors.newVirtualThreadPerTaskExecutor()));
 
     LOGGER.info(
         "Initializing PolarisCallContextCatalogFactory for metaStoreManagerType {}",
         metaStoreManagerFactory);
-    CallContextCatalogFactory catalogFactory =
-        new PolarisCallContextCatalogFactory(
-            entityManagerFactory, metaStoreManagerFactory, taskExecutor, fileIOFactory);
 
-    PolarisAuthorizer authorizer = new PolarisAuthorizerImpl(configurationStore);
-    IcebergCatalogAdapter catalogAdapter =
-        new IcebergCatalogAdapter(
-            catalogFactory, entityManagerFactory, metaStoreManagerFactory, authorizer);
-    environment.jersey().register(new IcebergRestCatalogApi(catalogAdapter));
-    environment.jersey().register(new IcebergRestConfigurationApi(catalogAdapter));
+    environment.jersey().register(IcebergRestCatalogApi.class);
+    environment.jersey().register(IcebergRestConfigurationApi.class);
 
     FilterRegistration.Dynamic corsRegistration =
         environment.servlets().addFilter("CORS", CrossOriginFilter.class);
@@ -256,18 +386,17 @@ public class PolarisApplication extends Application<PolarisApplicationConfig> {
         CrossOriginFilter.ALLOW_CREDENTIALS_PARAM,
         configuration.getCorsConfiguration().getAllowCredentials());
     corsRegistration.addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), true, "/*");
+
     environment
         .servlets()
         .addFilter("tracing", new TracingFilter(openTelemetry))
         .addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), true, "/*");
 
-    if (configuration.getRateLimiter() != null) {
-      environment.jersey().register(new RateLimiterFilter(configuration.getRateLimiter()));
+    if (configuration.hasRateLimiter()) {
+      environment.jersey().register(RateLimiterFilter.class);
     }
-
-    DiscoverableAuthenticator<String, AuthenticatedPolarisPrincipal> authenticator =
-        configuration.getPolarisAuthenticator();
-    authenticator.setMetaStoreManagerFactory(metaStoreManagerFactory);
+    Authenticator<String, AuthenticatedPolarisPrincipal> authenticator =
+        configuration.findService(new TypeLiteral<>() {});
     AuthFilter<String, AuthenticatedPolarisPrincipal> oauthCredentialAuthFilter =
         new OAuthCredentialAuthFilter.Builder<AuthenticatedPolarisPrincipal>()
             .setAuthenticator(authenticator)
@@ -275,18 +404,15 @@ public class PolarisApplication extends Application<PolarisApplicationConfig> {
             .buildAuthFilter();
     environment.jersey().register(new AuthDynamicFeature(oauthCredentialAuthFilter));
     environment.healthChecks().register("polaris", new PolarisHealthCheck());
-    OAuth2ApiService oauth2Service = configuration.getOauth2Service();
-    if (oauth2Service instanceof HasMetaStoreManagerFactory emfAware) {
-      emfAware.setMetaStoreManagerFactory(metaStoreManagerFactory);
-    }
-    environment.jersey().register(new IcebergRestOAuth2Api(oauth2Service));
-    environment.jersey().register(new IcebergExceptionMapper());
-    environment.jersey().register(new PolarisExceptionMapper());
-    PolarisServiceImpl polarisService =
-        new PolarisServiceImpl(entityManagerFactory, metaStoreManagerFactory, authorizer);
-    environment.jersey().register(new PolarisCatalogsApi(polarisService));
-    environment.jersey().register(new PolarisPrincipalsApi(polarisService));
-    environment.jersey().register(new PolarisPrincipalRolesApi(polarisService));
+
+    environment.jersey().register(IcebergRestOAuth2Api.class);
+    environment.jersey().register(IcebergExceptionMapper.class);
+    environment.jersey().register(PolarisExceptionMapper.class);
+
+    environment.jersey().register(PolarisCatalogsApi.class);
+    environment.jersey().register(PolarisPrincipalsApi.class);
+    environment.jersey().register(PolarisPrincipalRolesApi.class);
+
     ObjectMapper objectMapper = environment.getObjectMapper();
     objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
     objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -301,20 +427,14 @@ public class PolarisApplication extends Application<PolarisApplicationConfig> {
       LOGGER.info("Limiting request body size to {} bytes", maxRequestBodyBytes);
     }
 
-    environment.jersey().register(new StreamReadConstraintsExceptionMapper());
+    environment.jersey().register(StreamReadConstraintsExceptionMapper.class);
     RESTSerializers.registerAll(objectMapper);
     Serializers.registerSerializers(objectMapper);
-    environment.jersey().register(new IcebergJsonProcessingExceptionMapper());
-    environment.jersey().register(new IcebergJerseyViolationExceptionMapper());
-    environment.jersey().register(new TimedApplicationEventListener(polarisMetricRegistry));
+    environment.jersey().register(IcebergJsonProcessingExceptionMapper.class);
+    environment.jersey().register(IcebergJerseyViolationExceptionMapper.class);
 
-    polarisMetricRegistry.init(
-        IcebergRestCatalogApi.class,
-        IcebergRestConfigurationApi.class,
-        IcebergRestOAuth2Api.class,
-        PolarisCatalogsApi.class,
-        PolarisPrincipalsApi.class,
-        PolarisPrincipalRolesApi.class);
+    // for tests, we have to instantiate the TimedApplicationEventListener directly
+    environment.jersey().register(new TimedApplicationEventListener(polarisMetricRegistry));
 
     environment
         .admin()
@@ -362,6 +482,7 @@ public class PolarisApplication extends Application<PolarisApplicationConfig> {
     private final RealmContextResolver realmContextResolver;
     private final CallContextResolver callContextResolver;
 
+    @Inject
     public ContextResolverFilter(
         RealmContextResolver realmContextResolver, CallContextResolver callContextResolver) {
       this.realmContextResolver = realmContextResolver;
@@ -403,5 +524,32 @@ public class PolarisApplication extends Application<PolarisApplicationConfig> {
         currentCallContext.close();
       }
     }
+  }
+
+  private static class PolarisMetaStoreManagerFactory implements Factory<PolarisMetaStoreManager> {
+    @Inject MetaStoreManagerFactory metaStoreManagerFactory;
+
+    @RealmScope
+    @Override
+    public PolarisMetaStoreManager provide() {
+      RealmContext realmContext = CallContext.getCurrentContext().getRealmContext();
+      return metaStoreManagerFactory.getOrCreateMetaStoreManager(realmContext);
+    }
+
+    @Override
+    public void dispose(PolarisMetaStoreManager instance) {}
+  }
+
+  private static class PolarisRemoteCacheFactory implements Factory<PolarisRemoteCache> {
+    @Inject PolarisMetaStoreManager metaStoreManager;
+
+    @RealmScope
+    @Override
+    public PolarisRemoteCache provide() {
+      return metaStoreManager;
+    }
+
+    @Override
+    public void dispose(PolarisRemoteCache instance) {}
   }
 }

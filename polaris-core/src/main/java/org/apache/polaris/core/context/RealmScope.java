@@ -16,11 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.polaris.service.tracing;
+package org.apache.polaris.core.context;
 
-import io.opentelemetry.api.OpenTelemetry;
+import jakarta.inject.Scope;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
-/** Allows setting a configured instance of {@link OpenTelemetry} */
-public interface OpenTelemetryAware {
-  void setOpenTelemetry(OpenTelemetry openTelemetry);
-}
+@Scope
+@Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE, ElementType.METHOD})
+public @interface RealmScope {}

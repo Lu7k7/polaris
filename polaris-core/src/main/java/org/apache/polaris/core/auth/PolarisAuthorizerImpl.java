@@ -91,6 +91,7 @@ import static org.apache.polaris.core.entity.PolarisPrivilege.VIEW_WRITE_PROPERT
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
+import jakarta.inject.Inject;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -460,6 +461,7 @@ public class PolarisAuthorizerImpl implements PolarisAuthorizer {
 
   private final PolarisConfigurationStore featureConfig;
 
+  @Inject
   public PolarisAuthorizerImpl(PolarisConfigurationStore featureConfig) {
     this.featureConfig = featureConfig;
   }
