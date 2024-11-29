@@ -18,9 +18,11 @@
  */
 package org.apache.polaris.service.persistence;
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import io.dropwizard.jackson.Discoverable;
+import io.quarkus.runtime.Startup;
+import io.smallrye.common.annotation.Identifier;
 import jakarta.annotation.Nonnull;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -34,11 +36,32 @@ import org.apache.polaris.core.persistence.PolarisMetaStoreManager;
 import org.apache.polaris.core.persistence.PolarisMetaStoreSession;
 import org.apache.polaris.core.persistence.PolarisTreeMapMetaStoreSessionImpl;
 import org.apache.polaris.core.persistence.PolarisTreeMapStore;
+import org.apache.polaris.core.storage.PolarisStorageIntegrationProvider;
+import org.apache.polaris.service.context.RealmContextResolver;
 
-@JsonTypeName("in-memory")
+@ApplicationScoped
+@Identifier("in-memory")
 public class InMemoryPolarisMetaStoreManagerFactory
-    extends LocalPolarisMetaStoreManagerFactory<PolarisTreeMapStore> implements Discoverable {
-  final Set<String> bootstrappedRealms = new HashSet<>();
+    extends LocalPolarisMetaStoreManagerFactory<PolarisTreeMapStore> {
+
+  private final Set<String> bootstrappedRealms = new HashSet<>();
+  private final RealmContextResolver realmContextResolver;
+  private final PolarisStorageIntegrationProvider storageIntegration;
+
+  @Inject
+  public InMemoryPolarisMetaStoreManagerFactory(
+      PolarisStorageIntegrationProvider storageIntegration,
+      RealmContextResolver realmContextResolver) {
+    this.storageIntegration = storageIntegration;
+    this.realmContextResolver = realmContextResolver;
+  }
+
+  @Startup
+  public void init() {
+    // For in-memory metastore we need to bootstrap Service and Service principal at startup
+    // (for default realm)
+    getOrCreateMetaStoreManager(realmContextResolver::getDefaultRealm);
+  }
 
   @Override
   protected PolarisTreeMapStore createBackingStore(@Nonnull PolarisDiagnostics diagnostics) {

@@ -26,7 +26,6 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import java.util.Map;
 import org.apache.polaris.core.PolarisCallContext;
-import org.apache.polaris.core.auth.PolarisSecretsManager.PrincipalSecretsResult;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.context.RealmContext;
 import org.apache.polaris.core.entity.PolarisBaseEntity;
@@ -66,7 +65,7 @@ public class JWTSymmetricKeyGeneratorTest {
     PolarisPrincipalSecrets principalSecrets =
         new PolarisPrincipalSecrets(1L, clientId, mainSecret, "otherSecret");
     Mockito.when(metastoreManager.loadPrincipalSecrets(polarisCallContext, clientId))
-        .thenReturn(new PrincipalSecretsResult(principalSecrets));
+        .thenReturn(new PolarisMetaStoreManager.PrincipalSecretsResult(principalSecrets));
     PolarisBaseEntity principal =
         new PolarisBaseEntity(
             0L,
